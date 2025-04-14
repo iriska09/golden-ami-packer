@@ -1,3 +1,16 @@
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 1.0.0"
+      source  = "github.com/hashicorp/amazon"
+    }
+    ansible = {
+      version = ">= 1.0.0"
+      source  = "github.com/hashicorp/ansible"
+    }
+  }
+}
+
 variable "source_ami" {}
 variable "subnet_id" {}
 variable "iam_instance_profile" {}
