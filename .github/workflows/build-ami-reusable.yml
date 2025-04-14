@@ -32,6 +32,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@v2
+        with:
+          version: latest
+
+      - name: Setup Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
