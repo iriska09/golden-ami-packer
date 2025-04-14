@@ -1,56 +1,39 @@
-name: Build Golden AMI Reusable
+name: Call Golden AMI Build
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       image_type:
+        description: 'Choose image type: amazon or ubuntu'
         required: true
-        type: string
-    secrets:
-      AWS_ROLE_ARN:
-        required: true
-      AWS_REGION:
-        required: true
-      AWS_SUBNET_ID:
-        required: true
-      AWS_IAM_INSTANCE_PROFILE:
-        required: true
-      AWS_SOURCE_AMAZON_AMI:
-        required: true
-      AWS_SOURCE_UBUNTU_AMI:
-        required: true
+        default: 'amazon'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  build:
-    name: Build AMI
+  call-build-ami:
     runs-on: ubuntu-latest
-
-    permissions:  # 👈 REQUIRED to assume role via OIDC
-      id-token: write
-      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Setup Packer
+
+      - name: Set up Packer
         uses: hashicorp/setup-packer@v2
         with:
-          version: latest
+          version: 'latest'
 
-      - name: Setup Ansible
+      - name: Initialize Packer
         run: |
-          sudo apt update
-          sudo apt install -y ansible
+          packer init .
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Install Packer
-        uses: hashicorp/setup-packer@v2
 
       - name: Build AMI
         run: |
