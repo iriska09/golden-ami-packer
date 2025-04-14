@@ -1,0 +1,61 @@
+name: Build Golden AMI Reusable
+
+on:
+  workflow_call:
+    inputs:
+      image_type:
+        required: true
+        type: string
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      AWS_REGION:
+        required: true
+      AWS_SUBNET_ID:
+        required: true
+      AWS_IAM_INSTANCE_PROFILE:
+        required: true
+      AWS_SOURCE_AMAZON_AMI:
+        required: true
+      AWS_SOURCE_UBUNTU_AMI:
+        required: true
+
+jobs:
+  build:
+    name: Build AMI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install Packer
+        uses: hashicorp/setup-packer@v2
+
+      - name: Build AMI
+        run: |
+          if [ "${{ inputs.image_type }}" = "amazon" ]; then
+            packer build \
+              -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
+              -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
+              -var "source_ami=${{ secrets.AWS_SOURCE_AMAZON_AMI }}" \
+              packer/amazon-linux.pkr.hcl
+          elif [ "${{ inputs.image_type }}" = "ubuntu" ]; then
+            packer build \
+              -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
+              -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
+              -var "source_ami=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" \
+              packer/ubuntu.pkr.hcl
+          else
+            echo "Invalid image_type"
+            exit 1
+          fi

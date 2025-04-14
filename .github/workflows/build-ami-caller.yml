@@ -1,0 +1,22 @@
+name: Call Golden AMI Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_type:
+        description: 'Choose image type: amazon or ubuntu'
+        required: true
+        default: 'amazon'
+
+jobs:
+  call-build-ami:
+    uses: ./.github/workflows/build-ami-reusable.yml
+    with:
+      image_type: ${{ github.event.inputs.image_type }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_SUBNET_ID: ${{ secrets.AWS_SUBNET_ID }}
+      AWS_IAM_INSTANCE_PROFILE: ${{ secrets.AWS_IAM_INSTANCE_PROFILE }}
+      AWS_SOURCE_AMAZON_AMI: ${{ secrets.AWS_SOURCE_AMAZON_AMI }}
+      AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}
