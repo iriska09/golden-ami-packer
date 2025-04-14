@@ -8,6 +8,10 @@ on:
         required: true
         default: 'amazon'
 
+permissions:  #  REQUIRED for OIDC to work in reusable workflows!
+  id-token: write
+  contents: read
+
 jobs:
   call-build-ami:
     uses: ./.github/workflows/build-ami-reusable.yml
@@ -19,4 +23,4 @@ jobs:
       AWS_SUBNET_ID: ${{ secrets.AWS_SUBNET_ID }}
       AWS_IAM_INSTANCE_PROFILE: ${{ secrets.AWS_IAM_INSTANCE_PROFILE }}
       AWS_SOURCE_AMAZON_AMI: ${{ secrets.AWS_SOURCE_AMAZON_AMI }}
-      AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}
+      AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}  # 👈 ✅ Just needed this line to be closed properly

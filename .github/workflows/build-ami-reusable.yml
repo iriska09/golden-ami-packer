@@ -24,7 +24,8 @@ jobs:
   build:
     name: Build AMI
     runs-on: ubuntu-latest
-    permissions:
+
+    permissions:  # 👈 REQUIRED to assume role via OIDC
       id-token: write
       contents: read
 
@@ -56,6 +57,6 @@ jobs:
               -var "source_ami=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" \
               packer/ubuntu.pkr.hcl
           else
-            echo "Invalid image_type"
+            echo "Invalid image_type: ${{ inputs.image_type }}"
             exit 1
           fi
