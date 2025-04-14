@@ -8,19 +8,20 @@ on:
         required: true
         default: 'amazon'
 
-permissions:  #  REQUIRED for OIDC to work in reusable workflows!
+permissions:
   id-token: write
   contents: read
 
 jobs:
   call-build-ami:
-    uses: ./.github/workflows/build-ami-reusable.yml
+    uses: ./.github/workflows/build-ami-reusable.yml  # Reusable workflow file path
     with:
-      image_type: ${{ github.event.inputs.image_type }}
+      image_type: ${{ github.event.inputs.image_type }}  # Pass image_type from user input
     secrets:
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_SUBNET_ID: ${{ secrets.AWS_SUBNET_ID }}
       AWS_IAM_INSTANCE_PROFILE: ${{ secrets.AWS_IAM_INSTANCE_PROFILE }}
       AWS_SOURCE_AMAZON_AMI: ${{ secrets.AWS_SOURCE_AMAZON_AMI }}
-      AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}  # 👈 ✅ Just needed this line to be closed properly
+      AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}
