@@ -44,19 +44,19 @@ jobs:
 
       - name: Build AMI
         run: |
-          if [ "${{ inputs.image_type }}" = "amazon" ]; then
+          if [ "${{ github.event.inputs.image_type }}" = "amazon" ]; then
             packer build \
               -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
               -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
               -var "source_ami=${{ secrets.AWS_SOURCE_AMAZON_AMI }}" \
               packer/amazon-linux.pkr.hcl
-          elif [ "${{ inputs.image_type }}" = "ubuntu" ]; then
+          elif [ "${{ github.event.inputs.image_type }}" = "ubuntu" ]; then
             packer build \
               -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
               -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
               -var "source_ami=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" \
               packer/ubuntu.pkr.hcl
           else
-            echo "Invalid image_type: ${{ inputs.image_type }}"
+            echo "Invalid image_type: ${{ github.event.inputs.image_type }}"
             exit 1
           fi
