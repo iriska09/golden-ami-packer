@@ -31,10 +31,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: golden-ami-builder
 
       - name: Determine source AMI
         id: ami-selector
