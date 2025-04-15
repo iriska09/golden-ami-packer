@@ -1,37 +1,35 @@
-name: Build Golden AMI
+name: Build Golden AMI with OIDC
 
 on:
   workflow_call:
     inputs:
-      image_type:
-        description: 'The type of image to build (amazon or ubuntu)'
+      ami-type:
+        description: 'Type of AMI to create (Amazon Linux or Ubuntu)'
         required: true
         type: string
 
 jobs:
   build-ami:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: none  # Set to 'none' to avoid the issue
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+    - name: Set up AWS credentials (via OIDC)
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # IAM role ARN
+        aws-region: ${{ secrets.AWS_REGION }}       # AWS region (e.g., us-west-2)
 
-      - name: Run Packer build for AMI
-        run: |
-          cd packer
-          if [ "${{ inputs.image_type }}" == "amazon" ]; then
-            packer build -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" -var "source_ami=${{ secrets.AWS_SOURCE_AMAZON_AMI }}" packer/amazon-linux.pkr.hcl
-          elif [ "${{ inputs.image_type }}" == "ubuntu" ]; then
-            packer build -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" -var "source_ami=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" packer/ubuntu.pkr.hcl
-          else
-            echo "Invalid image_type: ${{ inputs.image_type }}"
-            exit 1
-          fi
+    - name: Build Amazon Linux AMI (if chosen)
+      if: ${{ inputs.ami-type == 'amazon-linux' }}
+      run: |
+        cd packer
+        packer build amazon-linux.pkr.hcl
+
+    - name: Build Ubuntu AMI (if chosen)
+      if: ${{ inputs.ami-type == 'ubuntu' }}
+      run: |
+        cd packer
+        packer build ubuntu.pkr.hcl
