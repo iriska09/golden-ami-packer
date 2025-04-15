@@ -1,15 +1,11 @@
 packer {
   required_plugins {
-    amazon = {
-      version = ">= 1.2.0"
-      source  = "github.com/hashicorp/amazon"
-    }
-    ansible = {
-      version = ">= 1.1.0"
-      source  = "github.com/hashicorp/ansible"
-    }
+    amazon = { source = "github.com/hashicorp/amazon", version = "~> 1" }
+    ansible = { source = "github.com/hashicorp/ansible", version = "~> 1" }
   }
 }
+# ... [rest of your existing config] ...
+
 
 variable "source_ami" {
   type        = string

@@ -45,10 +45,13 @@ jobs:
       - name: Build AMI
         working-directory: ./packer
         run: |
+          packer plugins list
           packer init .
-          packer build \
+          packer build -debug \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
             -var "region=${{ secrets.AWS_REGION }}" \
             templates/${{ inputs.os_type }}.pkr.hcl
+            
+
