@@ -46,9 +46,7 @@ jobs:
         working-directory: ./packer
         run: |
           packer init .
-          packer validate -var-file=variables.pkr.hcl templates/${{ inputs.os_type }}.pkr.hcl
           packer build \
-            -var-file=variables.pkr.hcl \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \

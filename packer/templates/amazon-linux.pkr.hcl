@@ -1,3 +1,31 @@
+# Add this at the top of your template files
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 1.2.0"
+      source  = "github.com/hashicorp/amazon"
+    }
+  }
+}
+
+# Include variables
+variable "source_ami" {
+  type = string
+}
+
+variable "subnet_id" {
+  type = string
+}
+
+variable "iam_instance_profile" {
+  type = string
+}
+
+variable "region" {
+  type    = string
+  default = "us-east-1"
+}
+
 source "amazon-ebs" "amazon-linux" {
   ami_name        = "golden-amazon-linux-{{timestamp}}"
   source_ami      = var.source_ami
