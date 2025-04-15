@@ -2,14 +2,15 @@ packer {
   required_plugins {
     amazon = {
       source  = "github.com/hashicorp/amazon"
-      version = "~> 1"
+      version = "1.3.6" # Pinned exact version
     }
     ansible = {
       source  = "github.com/hashicorp/ansible"
-      version = "~> 1"
+      version = "1.1.0" # Pinned exact version
     }
   }
 }
+
 variable "source_ami" {
   type        = string
   description = "Source AMI ID"
@@ -31,6 +32,16 @@ variable "region" {
   default     = "us-east-1"
 }
 
+variable "script_path" {
+  type    = string
+  default = "./scripts/bootstrap-ubuntu.sh"
+}
+
+variable "playbook_path" {
+  type    = string
+  default = "./ansible/playbooks/playbook.yml"
+}
+
 source "amazon-ebs" "ubuntu" {
   ami_name              = "golden-ubuntu-{{timestamp}}"
   ami_description       = "CIS Hardened Ubuntu"
@@ -41,6 +52,7 @@ source "amazon-ebs" "ubuntu" {
   subnet_id             = var.subnet_id
   iam_instance_profile  = var.iam_instance_profile
   ssh_pty               = true
+  temporary_key_pair_type = "ed25519"
 
   launch_block_device_mappings {
     device_name           = "/dev/sda1"
@@ -54,6 +66,8 @@ source "amazon-ebs" "ubuntu" {
     Name        = "golden-ubuntu"
     OS          = "Ubuntu"
     ManagedBy   = "Packer"
+    SourceAMI   = "{{ .SourceAMI }}"
+    BuildDate   = "{{ timestamp }}"
   }
 }
 
@@ -61,13 +75,15 @@ build {
   sources = ["source.amazon-ebs.ubuntu"]
 
   provisioner "shell" {
-    script          = "../scripts/bootstrap-ubuntu.sh"
+    script          = var.script_path
     execute_command = "sudo -E -S sh '{{ .Path }}'"
   }
 
   provisioner "ansible" {
-    playbook_file   = "../../ansible/playbooks/playbook.yml"
+    playbook_file   = var.playbook_path
+    galaxy_file     = "./ansible/requirements.yml"
     extra_arguments = ["-e", "os_type=ubuntu"]
     user            = "ubuntu"
+    use_proxy       = false
   }
 }

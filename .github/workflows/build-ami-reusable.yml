@@ -62,41 +62,25 @@ jobs:
           echo "Installed Packer plugins:"
           packer plugins installed || echo "Plugin check failed - proceeding anyway"
 
-      # - name: Build AMI
-      #   working-directory: ./packer
-      #   run: |
-      #     set -x  # Enable debug output
-      #     packer build -debug \
-      #       -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
-      #       -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
-      #       -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
-      #       -var "region=${{ secrets.AWS_REGION }}" \
-      #       templates/${{ inputs.os_type }}.pkr.hcl
+
 
       - name: Build AMI
         working-directory: ./packer
         run: |
-          # 1. Nuke all existing plugin directories
-          rm -rf ~/.config/packer/plugins/* || true
-          rm -rf ~/.packer.d/plugins/* || true
+          # Verify all required files exist
+          echo "=== VERIFYING FILES ==="
+          ls -la ../scripts/
+          ls -la ../../ansible/playbooks/
           
-          # 2. Manually install the Ansible plugin first
-          mkdir -p ~/.config/packer/plugins/github.com/hashicorp/ansible
-          PACKER_PLUGIN_PATH=~/.config/packer/plugins/github.com/hashicorp/ansible \
-          packer plugins install github.com/hashicorp/ansible
+          # Install plugins
+          packer init -upgrade .
           
-          # 3. Initialize all plugins with force
-          packer init -force .
-          
-          # 4. Verify EXACTLY what's installed
-          echo "=== VERIFYING PLUGINS ==="
-          find ~/.config/packer/plugins -type f
-          packer plugins installed
-          
-          # 5. Build with full debug
+          # Build with absolute paths
           PACKER_LOG=1 packer build \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
             -var "region=${{ secrets.AWS_REGION }}" \
-            templates/${{ inputs.os_type }}.pkr.hcl
+            -var "script_path=${GITHUB_WORKSPACE}/packer/scripts/bootstrap-ubuntu.sh" \
+            -var "playbook_path=${GITHUB_WORKSPACE}/ansible/playbooks/playbook.yml" \
+            templates/ubuntu.pkr.hcl
