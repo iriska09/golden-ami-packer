@@ -47,9 +47,11 @@ jobs:
             echo "SOURCE_AMI=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" >> $GITHUB_OUTPUT
           fi
 
+
       - name: Build AMI
         working-directory: ./packer
         run: |
+          packer init .  # Initializes plugins
           packer build \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \

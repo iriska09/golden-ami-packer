@@ -32,16 +32,15 @@
 #     extra_arguments = ["-e", "os_type=ubuntu"]
 #   }
 # }
-
 source "amazon-ebs" "ubuntu" {
-  ami_name        = "golden-ubuntu-${var.environment}-{{timestamp}}"
-  ami_description = "CIS Hardened Ubuntu (${var.environment})"
-  source_ami      = var.source_ami
+  ami_name        = "golden-ubuntu-{{timestamp}}"
+  source_ami      = var.source_ami      # Uses declared variable
   instance_type   = "t3.micro"
-  region          = var.region
-  ssh_username    = "ubuntu"
-  subnet_id       = var.subnet_id
-  iam_instance_profile = var.iam_instance_profile
+  region          = var.region          # Uses declared variable
+  subnet_id       = var.subnet_id       # Uses declared variable
+  iam_instance_profile = var.iam_instance_profile  # Uses declared variable
+.
+}
 
   launch_block_device_mappings {
     device_name = "/dev/sda1"
