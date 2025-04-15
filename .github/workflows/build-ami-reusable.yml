@@ -20,13 +20,18 @@ on:
       AWS_SOURCE_UBUNTU_AMI:
         required: true
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Configure AWS
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -42,16 +47,28 @@ jobs:
             echo "SOURCE_AMI=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Setup Packer environment
+        working-directory: ./packer
+        run: |
+          # Install latest Packer version
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install -y packer
+
+          # Initialize plugins
+          packer init .
+
+          # Verify plugins
+          echo "Installed Packer plugins:"
+          packer plugins installed || echo "Plugin check failed - proceeding anyway"
+
       - name: Build AMI
         working-directory: ./packer
         run: |
-          packer plugins list
-          packer init .
+          set -x  # Enable debug output
           packer build -debug \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
             -var "region=${{ secrets.AWS_REGION }}" \
             templates/${{ inputs.os_type }}.pkr.hcl
-            
-
