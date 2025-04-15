@@ -41,7 +41,6 @@ source "amazon-ebs" "amazon-linux" {
   ssh_username          = "ec2-user"
   subnet_id             = var.subnet_id
   iam_instance_profile  = var.iam_instance_profile
-  temporary_key_pair_type = "ed25519"
   ssh_pty               = true
 
   launch_block_device_mappings {
@@ -56,8 +55,6 @@ source "amazon-ebs" "amazon-linux" {
     Name        = "golden-amazon-linux"
     OS          = "Amazon Linux"
     ManagedBy   = "Packer"
-    SourceAMI   = "{{ .SourceAMI }}"
-    BuildDate   = "{{ timestamp }}"
   }
 }
 
@@ -71,22 +68,7 @@ build {
 
   provisioner "ansible" {
     playbook_file   = "../../ansible/playbooks/playbook.yml"
-    galaxy_file     = "../../ansible/requirements.yml"
-    extra_arguments = [
-      "-e", "os_type=amazon-linux",
-      "--scp-extra-args", "'-O'",
-      "--ssh-extra-args", "-o IdentitiesOnly=yes"
-    ]
+    extra_arguments = ["-e", "os_type=amazon-linux"]
     user            = "ec2-user"
-    use_proxy       = false
-  }
-
-  post-processor "manifest" {
-    output     = "manifest.json"
-    strip_path = true
-    custom_data = {
-      ami_id    = "{{ .BuildID }}"
-      build_date = "{{ timestamp }}"
-    }
   }
 }
