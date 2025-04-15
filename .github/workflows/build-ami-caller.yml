@@ -14,18 +14,17 @@ on:
 jobs:
   call-reusable-workflow:
     runs-on: ubuntu-latest
-
     permissions:
-      id-token: write  # Ensure the job has the correct permissions to write an ID token
+      id-token: write  # Ensure the job has the correct permissions for OIDC authentication
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Call reusable workflow
-        uses: iriska09/golden-ami-packer/.github/workflows/build-ami-reusable.yml@cfe7b34ed723485ed47cbd25a41acbc9ab89ddc1
+      - name: Trigger Reusable Workflow for AMI Build
+        uses: ./.github/workflows/build-ami-reusable.yml
         with:
-          image_type: ${{ inputs.image_type }}
+          image_type: ${{ github.event.inputs.image_type }}
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}

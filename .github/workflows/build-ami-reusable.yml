@@ -1,4 +1,4 @@
-name: Build AMI Reusable
+name: Build AMI
 
 on:
   workflow_call:
@@ -6,59 +6,41 @@ on:
       image_type:
         required: true
         type: string
-    secrets:
-      AWS_ROLE_ARN:
-        required: true
-      AWS_REGION:
-        required: true
-      AWS_SUBNET_ID:
-        required: true
-      AWS_IAM_INSTANCE_PROFILE:
-        required: true
-      AWS_SOURCE_AMAZON_AMI:
-        required: true
-      AWS_SOURCE_UBUNTU_AMI:
-        required: true
 
 jobs:
   build-ami:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
-      contents: read
+      id-token: write  # Ensure the job has the correct permissions for OIDC authentication
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Initialize Packer
-        run: |
-          cd packer
-          packer init .
+      - name: Set up Packer
+        uses: hashicorp/setup-packer@v2
 
       - name: Build AMI
         run: |
-          cd packer
           if [ "${{ inputs.image_type }}" = "amazon" ]; then
             packer build \
-              -var "region=${{ secrets.AWS_REGION }}" \
-              -var "source_ami=${{ secrets.AWS_SOURCE_AMAZON_AMI }}" \
               -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
               -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
-              amazon-linux.pkr.hcl
+              -var "source_ami=${{ secrets.AWS_SOURCE_AMAZON_AMI }}" \
+              packer/amazon-linux.pkr.hcl
           elif [ "${{ inputs.image_type }}" = "ubuntu" ]; then
             packer build \
-              -var "region=${{ secrets.AWS_REGION }}" \
-              -var "source_ami=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" \
               -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
               -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
-              ubuntu.pkr.hcl
+              -var "source_ami=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" \
+              packer/ubuntu.pkr.hcl
           else
             echo "Invalid image_type: ${{ inputs.image_type }}"
             exit 1
