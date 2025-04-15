@@ -35,12 +35,13 @@
 
 source "amazon-ebs" "amazon-linux" {
   ami_name        = "golden-amazon-linux-{{timestamp}}"
-  source_ami      = var.source_ami      # Uses declared variable
+  ami_description = "CIS Hardened Amazon Linux"
+  source_ami      = var.source_ami
   instance_type   = "t3.micro"
-  region          = var.region          # Uses declared variable
-  subnet_id       = var.subnet_id       # Uses declared variable
-  iam_instance_profile = var.iam_instance_profile  # Uses declared variable
-}
+  region          = var.region
+  ssh_username    = "ec2-user"
+  subnet_id       = var.subnet_id
+  iam_instance_profile = var.iam_instance_profile
 
   launch_block_device_mappings {
     device_name = "/dev/xvda"
@@ -52,8 +53,7 @@ source "amazon-ebs" "amazon-linux" {
   tags = {
     Name        = "golden-amazon-linux"
     OS          = "Amazon Linux"
-    Environment = var.environment
-    ManagedBy   = "packer"
+    ManagedBy   = "Packer"
   }
 }
 
@@ -65,16 +65,7 @@ build {
   }
 
   provisioner "ansible" {
-    playbook_file   = "../../ansible/playbooks/playbook.yml"
-    galaxy_file     = "../../ansible/requirements.yml"
-    extra_arguments = [
-      "-e", "os_type=amazon-linux",
-      "-e", "environment=${var.environment}"
-    ]
-    user            = "ec2-user"
-  }
-
-  post-processor "manifest" {
-    output = "manifest.json"
+    playbook_file = "../../ansible/playbooks/playbook.yml"
+    extra_arguments = ["-e", "os_type=amazon-linux"]
   }
 }
