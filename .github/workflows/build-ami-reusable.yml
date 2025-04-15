@@ -76,18 +76,25 @@ jobs:
       - name: Build AMI
         working-directory: ./packer
         run: |
-          # Clean plugin cache (critical for CI environments)
-          rm -rf ~/.config/packer/plugins || true
+          # 1. Nuke all existing plugin directories
+          rm -rf ~/.config/packer/plugins/* || true
+          rm -rf ~/.packer.d/plugins/* || true
           
-          # Install Packer plugins with forced reinstall
-          packer init -upgrade .
+          # 2. Manually install the Ansible plugin first
+          mkdir -p ~/.config/packer/plugins/github.com/hashicorp/ansible
+          PACKER_PLUGIN_PATH=~/.config/packer/plugins/github.com/hashicorp/ansible \
+          packer plugins install github.com/hashicorp/ansible
           
-          # Verify plugins are installed
-          echo "Installed plugins:"
+          # 3. Initialize all plugins with force
+          packer init -force .
+          
+          # 4. Verify EXACTLY what's installed
+          echo "=== VERIFYING PLUGINS ==="
+          find ~/.config/packer/plugins -type f
           packer plugins installed
           
-          # Build with debug
-          packer build \
+          # 5. Build with full debug
+          PACKER_LOG=1 packer build \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
