@@ -34,14 +34,13 @@ variable "region" {
 
 variable "script_path" {
   type    = string
-  default = "./scripts/bootstrap.sh"
+  default = "./scripts/bootstrap.sh"  # Changed from bootstrap-ubuntu.sh
 }
 
 variable "playbook_path" {
   type    = string
-  default = "./ansible/playbooks/playbook.yml"
+  default = "../ansible/playbooks/cis-hardening.yml"  # Changed from playbook.yml
 }
-
 source "amazon-ebs" "amazon-linux" {
   ami_name              = "golden-amazon-linux-{{timestamp}}"
   ami_description       = "CIS Hardened Amazon Linux"
