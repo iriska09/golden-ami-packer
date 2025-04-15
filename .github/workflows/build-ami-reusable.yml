@@ -1,9 +1,10 @@
-name: Build AMI
+name: Build AMI Reusable Workflow
 
 on:
   workflow_call:
     inputs:
       image_type:
+        description: 'The type of image to build (amazon or ubuntu)'
         required: true
         type: string
 
@@ -11,10 +12,11 @@ jobs:
   build-ami:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Ensure the job has the correct permissions for OIDC authentication
+      id-token: write
+      contents: read
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
       - name: Set up AWS CLI
@@ -24,24 +26,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Set up Packer
-        uses: hashicorp/setup-packer@v2
-
-      - name: Build AMI
+      - name: Packer build for Amazon Linux or Ubuntu
         run: |
-          if [ "${{ inputs.image_type }}" = "amazon" ]; then
+          if [ "${{ inputs.image_type }}" == "amazon" ]; then
+            echo "Building Amazon Linux AMI"
             packer build \
               -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
               -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
               -var "source_ami=${{ secrets.AWS_SOURCE_AMAZON_AMI }}" \
               packer/amazon-linux.pkr.hcl
-          elif [ "${{ inputs.image_type }}" = "ubuntu" ]; then
+          elif [ "${{ inputs.image_type }}" == "ubuntu" ]; then
+            echo "Building Ubuntu AMI"
             packer build \
               -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
               -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
               -var "source_ami=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" \
               packer/ubuntu.pkr.hcl
           else
-            echo "Invalid image_type: ${{ inputs.image_type }}"
+            echo "Invalid image_type: ${image_type}"
             exit 1
           fi

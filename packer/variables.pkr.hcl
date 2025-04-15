@@ -1,15 +1,19 @@
-variable "region" {
-  type = string
-}
-
-variable "source_ami" {
-  type = string
-}
-
 variable "subnet_id" {
-  type = string
+  description = "The subnet ID for the EC2 instance."
+  type        = string
 }
 
 variable "iam_instance_profile" {
-  type = string
+  description = "IAM instance profile for the EC2 instance."
+  type        = string
+}
+
+variable "source_ami" {
+  description = "The source AMI to base the new AMI on."
+  type        = string
+}
+
+variable "region" {
+  description = "The AWS region."
+  type        = string
 }

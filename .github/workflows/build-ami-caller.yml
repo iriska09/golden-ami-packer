@@ -1,10 +1,10 @@
-name: Build AMI for Amazon Linux
+name: Build AMI Caller Workflow
 
 on:
   workflow_dispatch:
     inputs:
       image_type:
-        description: 'Choose image type'
+        description: 'Choose the image type to build (amazon or ubuntu)'
         required: true
         type: choice
         options:
@@ -13,22 +13,6 @@ on:
 
 jobs:
   call-reusable-workflow:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write  # Ensure the job has the correct permissions for OIDC authentication
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Trigger Reusable Workflow for AMI Build
-        uses: ./.github/workflows/build-ami-reusable.yml
-        with:
-          image_type: ${{ github.event.inputs.image_type }}
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-          AWS_SUBNET_ID: ${{ secrets.AWS_SUBNET_ID }}
-          AWS_IAM_INSTANCE_PROFILE: ${{ secrets.AWS_IAM_INSTANCE_PROFILE }}
-          AWS_SOURCE_AMAZON_AMI: ${{ secrets.AWS_SOURCE_AMAZON_AMI }}
-          AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}
+    uses: ./.github/workflows/build-ami-reusable.yml
+    with:
+      image_type: ${{ github.event.inputs.image_type }}

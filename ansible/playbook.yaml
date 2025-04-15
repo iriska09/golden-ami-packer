@@ -1,103 +1,133 @@
+# ---
+# - name: CIS Level 1 Hardening for Amazon Linux 2023
+#   hosts: all
+#   become: true
+
+#   tasks:
+#     - name: Disable root login via SSH
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: '^PermitRootLogin'
+#         line: 'PermitRootLogin no'
+
+#     - name: Disable password authentication over SSH
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: '^PasswordAuthentication'
+#         line: 'PasswordAuthentication no'
+
+#     - name: Set password max days to 90
+#       lineinfile:
+#         path: /etc/login.defs
+#         regexp: '^PASS_MAX_DAYS'
+#         line: 'PASS_MAX_DAYS   90'
+
+#     - name: Set password min days to 7
+#       lineinfile:
+#         path: /etc/login.defs
+#         regexp: '^PASS_MIN_DAYS'
+#         line: 'PASS_MIN_DAYS   7'
+
+#     - name: Set minimum password length to 14
+#       lineinfile:
+#         path: /etc/security/pwquality.conf
+#         regexp: '^minlen'
+#         line: 'minlen = 14'
+
+#     - name: Ensure auditd is installed
+#       package:
+#         name: audit
+#         state: present
+
+#     - name: Enable and start auditd
+#       service:
+#         name: auditd
+#         enabled: true
+#         state: started
+
+#     - name: Disable unused filesystem modules
+#       lineinfile:
+#         path: /etc/modprobe.d/CIS.conf
+#         create: yes
+#         line: "install {{ item }} /bin/true"
+#       loop:
+#         - cramfs
+#         - freevxfs
+#         - jffs2
+#         - hfs
+#         - hfsplus
+#         - squashfs
+#         - udf
+
+#     - name: Ensure IP forwarding is disabled
+#       sysctl:
+#         name: net.ipv4.ip_forward
+#         value: "0"
+#         state: present
+#         reload: yes
+
+#     - name: Ensure ICMP redirects are not accepted
+#       sysctl:
+#         name: net.ipv4.conf.all.accept_redirects
+#         value: "0"
+#         state: present
+#         reload: yes
+
+#     - name: Ensure cron is restricted to authorized users
+#       copy:
+#         content: ""
+#         dest: /etc/cron.allow
+#         owner: root
+#         group: root
+#         mode: '0600'
+
+#     - name: Set permissions on /etc/passwd
+#       file:
+#         path: /etc/passwd
+#         owner: root
+#         group: root
+#         mode: '0644'
+
+#     - name: Set permissions on /etc/shadow
+#       file:
+#         path: /etc/shadow
+#         owner: root
+#         group: root
+#         mode: '0000'
+
+#     - name: Set permissions on /etc/group
+#       file:
+#         path: /etc/group
+#         owner: root
+#         group: root
+#         mode: '0644'
 ---
-- name: CIS Level 1 Hardening for Amazon Linux 2023
+- name: Hardening the EC2 instance
   hosts: all
   become: true
-
   tasks:
-    - name: Disable root login via SSH
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^PermitRootLogin'
-        line: 'PermitRootLogin no'
+    - name: Ensure the system is updated
+      yum:
+        name: "*"
+        state: latest
 
-    - name: Disable password authentication over SSH
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^PasswordAuthentication'
-        line: 'PasswordAuthentication no'
-
-    - name: Set password max days to 90
-      lineinfile:
-        path: /etc/login.defs
-        regexp: '^PASS_MAX_DAYS'
-        line: 'PASS_MAX_DAYS   90'
-
-    - name: Set password min days to 7
-      lineinfile:
-        path: /etc/login.defs
-        regexp: '^PASS_MIN_DAYS'
-        line: 'PASS_MIN_DAYS   7'
-
-    - name: Set minimum password length to 14
-      lineinfile:
-        path: /etc/security/pwquality.conf
-        regexp: '^minlen'
-        line: 'minlen = 14'
-
-    - name: Ensure auditd is installed
-      package:
-        name: audit
-        state: present
-
-    - name: Enable and start auditd
+    - name: Disable unused services
       service:
-        name: auditd
-        enabled: true
-        state: started
-
-    - name: Disable unused filesystem modules
-      lineinfile:
-        path: /etc/modprobe.d/CIS.conf
-        create: yes
-        line: "install {{ item }} /bin/true"
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
       loop:
-        - cramfs
-        - freevxfs
-        - jffs2
-        - hfs
-        - hfsplus
-        - squashfs
-        - udf
+        - telnet
+        - nfs
+        - rpcbind
+        - dnsmasq
 
-    - name: Ensure IP forwarding is disabled
-      sysctl:
-        name: net.ipv4.ip_forward
-        value: "0"
-        state: present
-        reload: yes
-
-    - name: Ensure ICMP redirects are not accepted
-      sysctl:
-        name: net.ipv4.conf.all.accept_redirects
-        value: "0"
-        state: present
-        reload: yes
-
-    - name: Ensure cron is restricted to authorized users
-      copy:
-        content: ""
-        dest: /etc/cron.allow
-        owner: root
-        group: root
-        mode: '0600'
-
-    - name: Set permissions on /etc/passwd
-      file:
-        path: /etc/passwd
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Set permissions on /etc/shadow
-      file:
-        path: /etc/shadow
-        owner: root
-        group: root
-        mode: '0000'
-
-    - name: Set permissions on /etc/group
-      file:
-        path: /etc/group
-        owner: root
-        group: root
-        mode: '0644'
+    - name: Set correct SSH configurations
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: "^{{ item.option }}\\s*"
+        line: "{{ item.option }} {{ item.value }}"
+      with_items:
+        - { option: "PermitRootLogin", value: "no" }
+        - { option: "PasswordAuthentication", value: "no" }
+        - { option: "AllowUsers", value: "ec2-user" }
