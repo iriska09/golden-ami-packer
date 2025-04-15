@@ -69,8 +69,8 @@ jobs:
         run: |
           # Verify all required files exist
           echo "=== VERIFYING FILES ==="
-          ls -la ../scripts/
-          ls -la ../../ansible/playbooks/
+          ls -la ./packer/scripts/
+          ls -la ./ansible/playbooks/
           
           # Install plugins
           packer init -upgrade .
