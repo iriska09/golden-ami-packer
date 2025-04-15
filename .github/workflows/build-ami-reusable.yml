@@ -6,9 +6,6 @@ on:
       os_type:
         required: true
         type: string
-      environment:
-        required: true
-        type: string
     secrets:
       AWS_ROLE_ARN:
         required: true
@@ -23,10 +20,14 @@ on:
       AWS_SOURCE_UBUNTU_AMI:
         required: true
 
+# Critical fix for OIDC
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +36,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-          role-session-name: golden-ami-builder
+          role-session-name: golden-ami-builder-${{ github.run_number }}
 
       - name: Determine source AMI
         id: ami-selector
@@ -54,5 +55,4 @@ jobs:
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
             -var "region=${{ secrets.AWS_REGION }}" \
-            -var "environment=${{ inputs.environment }}" \
             templates/${{ inputs.os_type }}.pkr.hcl

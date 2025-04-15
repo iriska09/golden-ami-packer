@@ -2,24 +2,16 @@ name: AMI Builder - Trigger
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        type: choice
-        options: [dev, prod]
 
 jobs:
   build-amazon-linux:
     uses: ./.github/workflows/build-ami-reusable.yml
     secrets: inherit
     with:
-      os_type: "amazon-linux"
-      environment: ${{ inputs.environment }}
-
+      os_type: "amazon-linux"  # No environment parameter needed
+      
   build-ubuntu:
     uses: ./.github/workflows/build-ami-reusable.yml
     secrets: inherit
     with:
-      os_type: "ubuntu" 
-      environment: ${{ inputs.environment }}
+      os_type: "ubuntu"
