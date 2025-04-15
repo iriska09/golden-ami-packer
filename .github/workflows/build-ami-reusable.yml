@@ -62,11 +62,32 @@ jobs:
           echo "Installed Packer plugins:"
           packer plugins installed || echo "Plugin check failed - proceeding anyway"
 
+      # - name: Build AMI
+      #   working-directory: ./packer
+      #   run: |
+      #     set -x  # Enable debug output
+      #     packer build -debug \
+      #       -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
+      #       -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
+      #       -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
+      #       -var "region=${{ secrets.AWS_REGION }}" \
+      #       templates/${{ inputs.os_type }}.pkr.hcl
+
       - name: Build AMI
         working-directory: ./packer
         run: |
-          set -x  # Enable debug output
-          packer build -debug \
+          # Clean plugin cache (critical for CI environments)
+          rm -rf ~/.config/packer/plugins || true
+          
+          # Install Packer plugins with forced reinstall
+          packer init -upgrade .
+          
+          # Verify plugins are installed
+          echo "Installed plugins:"
+          packer plugins installed
+          
+          # Build with debug
+          packer build \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
