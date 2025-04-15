@@ -1,18 +1,22 @@
-name: Build AMI Caller Workflow
+name: Build AMI with Packer
 
 on:
   workflow_dispatch:
     inputs:
-      image_type:
-        description: 'Choose the image type to build (amazon or ubuntu)'
+      ami-type:
+        description: 'AMI Type (amazon-linux or ubuntu)'
         required: true
-        type: choice
-        options:
-          - amazon
-          - ubuntu
+        default: 'amazon-linux'
 
 jobs:
-  call-reusable-workflow:
-    uses: ./.github/workflows/build-ami-reusable.yml
+  build-ami:
+    uses: iriska09/golden-ami-packer/.github/workflows/build-ami-reusable.yml@c425a9ab9646107626279d08139b2fcaf05206a8
     with:
-      image_type: ${{ github.event.inputs.image_type }}
+      ami-type: ${{ inputs.ami-type }}
+    secrets:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_IAM_INSTANCE_PROFILE: ${{ secrets.AWS_IAM_INSTANCE_PROFILE }}
+      AWS_SOURCE_AMAZON_AMI: ${{ secrets.AWS_SOURCE_AMAZON_AMI }}
+      AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}
+      AWS_SUBNET_ID: ${{ secrets.AWS_SUBNET_ID }}

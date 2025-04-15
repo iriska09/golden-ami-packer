@@ -1,19 +1,23 @@
-variable "subnet_id" {
-  description = "The subnet ID for the EC2 instance."
-  type        = string
-}
-
-variable "iam_instance_profile" {
-  description = "IAM instance profile for the EC2 instance."
-  type        = string
+variable "region" {
+  type = string
 }
 
 variable "source_ami" {
-  description = "The source AMI to base the new AMI on."
-  type        = string
+  type = string
 }
 
-variable "region" {
-  description = "The AWS region."
-  type        = string
+variable "ssh_username" {
+  type = string
+}
+
+variable "iam_instance_profile" {
+  type = string
+}
+
+variable "subnet_id" {
+  type = string
+}
+
+variable "base_os" {
+  type = string
 }

@@ -1,26 +1,30 @@
-source "amazon-ebs" "ubuntu" {
-  ami_name          = "ubuntu-{{timestamp}}"
-  instance_type     = "t2.micro"
-  region            = var.region
-  subnet_id         = var.subnet_id
-  source_ami        = var.source_ami
-  iam_instance_profile = var.iam_instance_profile
+variable "region" {}
+variable "source_ami" {}
+variable "ssh_username" {}
+variable "iam_instance_profile" {}
+variable "subnet_id" {}
+variable "base_os" {}
+
+source "amazon-ebs.ubuntu" "ubuntu" {
+  region                  = var.region
+  source_ami              = var.source_ami
+  instance_type           = "t3.micro"
+  ssh_username            = var.ssh_username
+  iam_instance_profile    = var.iam_instance_profile
+  subnet_id               = var.subnet_id
   associate_public_ip_address = true
-
-  # Provisioner to run the bootstrap script for Ansible hardening
-  provisioner "file" {
-    source      = "scripts/bootstrap.sh"
-    destination = "/tmp/bootstrap.sh"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "chmod +x /tmp/bootstrap.sh",
-      "/tmp/bootstrap.sh"
-    ]
-  }
+  ami_name                = "golden-ami-${var.base_os}-${timestamp()}"
 }
 
 build {
-  sources = ["source.amazon-ebs.ubuntu"]
+  name = "ubuntu"
+  sources = ["source.amazon-ebs.ubuntu.ubuntu"]
+
+  provisioner "shell" {
+    script = "scripts/bootstrap.sh"
+  }
+
+  provisioner "ansible" {
+    playbook_file = "../ansible/playbook.yml"
+  }
 }
