@@ -1,0 +1,9 @@
+---
+cis_timezone: UTC
+cis_max_log_file_size: 50
+
+---
+cis_params:
+  password_max_days: 90
+  password_min_days: 7
+  umask: "027"

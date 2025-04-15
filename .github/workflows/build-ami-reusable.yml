@@ -1,71 +1,57 @@
-name: Build AMI Reusable
+name: AMI Builder - Core
 
 on:
   workflow_call:
     inputs:
-      region:
+      os_type:
         required: true
         type: string
-      role_to_assume:
+      environment:
         required: true
         type: string
-      iam_instance_profile:
+    secrets:
+      AWS_ROLE_ARN:
         required: true
-        type: string
-      subnet_id:
+      AWS_REGION:
         required: true
-        type: string
-      source_ami_amazon:
+      AWS_SUBNET_ID:
         required: true
-        type: string
-      source_ami_ubuntu:
+      AWS_IAM_INSTANCE_PROFILE:
         required: true
-        type: string
-      base_os:
+      AWS_SOURCE_AMAZON_AMI:
         required: true
-        type: string
+      AWS_SOURCE_UBUNTU_AMI:
+        required: true
 
 jobs:
-  build-ami:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
+    environment: ${{ inputs.environment }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.role_to_assume }}
-          aws-region: ${{ inputs.region }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Set Source AMI Based on Input OS
-        id: select-ami
+      - name: Determine source AMI
+        id: ami-selector
         run: |
-          echo "Chosen OS: ${{ inputs.base_os }}"
-          if [[ "${{ inputs.base_os }}" == "ubuntu" ]]; then
-            echo "SOURCE_AMI=${{ inputs.source_ami_ubuntu }}" >> $GITHUB_ENV
-            echo "SSH_USER=ubuntu" >> $GITHUB_ENV
-          elif [[ "${{ inputs.base_os }}" == "amazon" ]]; then
-            echo "SOURCE_AMI=${{ inputs.source_ami_amazon }}" >> $GITHUB_ENV
-            echo "SSH_USER=ec2-user" >> $GITHUB_ENV
+          if [ "${{ inputs.os_type }}" = "amazon-linux" ]; then
+            echo "SOURCE_AMI=${{ secrets.AWS_SOURCE_AMAZON_AMI }}" >> $GITHUB_OUTPUT
           else
-            echo "Invalid base_os input. Must be 'ubuntu' or 'amazon'."
-            exit 1
+            echo "SOURCE_AMI=${{ secrets.AWS_SOURCE_UBUNTU_AMI }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build AMI with Packer
+      - name: Build AMI
+        working-directory: ./packer
         run: |
-          packer init packer-template.pkr.hcl
           packer build \
-            -var "source_ami=$SOURCE_AMI" \
-            -var "region=${{ inputs.region }}" \
-            -var "subnet_id=${{ inputs.subnet_id }}" \
-            -var "iam_instance_profile=${{ inputs.iam_instance_profile }}" \
-            -var "ssh_username=$SSH_USER" \
-            -var "base_os=${{ inputs.base_os }}" \
-            -var-file="variables.pkrvars.hcl" \
-            packer-template.pkr.hcl
+            -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
+            -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
+            -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
+            -var "region=${{ secrets.AWS_REGION }}" \
+            -var "environment=${{ inputs.environment }}" \
+            templates/${{ inputs.os_type }}.pkr.hcl
