@@ -4,19 +4,32 @@ on:
   workflow_dispatch:
     inputs:
       image_type:
-        description: "Image type (amazon or ubuntu)"
+        description: 'Choose image type'
         required: true
-        default: "amazon"
+        type: choice
+        options:
+          - amazon
+          - ubuntu
 
 jobs:
-  call-reusable:
-    uses: ./.github/workflows/build-ami-reusable.yml
-    with:
-      image_type: ${{ github.event.inputs.image_type }}
-    secrets:
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      AWS_SUBNET_ID: ${{ secrets.AWS_SUBNET_ID }}
-      AWS_IAM_INSTANCE_PROFILE: ${{ secrets.AWS_IAM_INSTANCE_PROFILE }}
-      AWS_SOURCE_AMAZON_AMI: ${{ secrets.AWS_SOURCE_AMAZON_AMI }}
-      AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}
+  call-reusable-workflow:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # Ensure the job has the correct permissions to write an ID token
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Call reusable workflow
+        uses: iriska09/golden-ami-packer/.github/workflows/build-ami-reusable.yml@cfe7b34ed723485ed47cbd25a41acbc9ab89ddc1
+        with:
+          image_type: ${{ inputs.image_type }}
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          AWS_SUBNET_ID: ${{ secrets.AWS_SUBNET_ID }}
+          AWS_IAM_INSTANCE_PROFILE: ${{ secrets.AWS_IAM_INSTANCE_PROFILE }}
+          AWS_SOURCE_AMAZON_AMI: ${{ secrets.AWS_SOURCE_AMAZON_AMI }}
+          AWS_SOURCE_UBUNTU_AMI: ${{ secrets.AWS_SOURCE_UBUNTU_AMI }}
