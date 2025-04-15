@@ -16,7 +16,7 @@ variable "iam_instance_profile" {
 variable "region" {
   type        = string
   description = "AWS region"
-  default     = "us-east-1"  # Default value if not specified
+  default     = "us-east-1"
 }
 
 packer {

@@ -2,20 +2,20 @@ name: AMI Builder - Trigger
 
 on:
   workflow_dispatch:
+    inputs:
+      os_type:
+        description: 'OS to build'
+        required: true
+        type: choice
+        options: [amazon-linux, ubuntu]
 
 permissions:
-  id-token: write  # This must be declared in the caller workflow
+  id-token: write
   contents: read
 
 jobs:
-  build-amazon-linux:
+  build:
     uses: ./.github/workflows/build-ami-reusable.yml
     with:
-      os_type: "amazon-linux"
-    secrets: inherit
-
-  build-ubuntu:
-    uses: ./.github/workflows/build-ami-reusable.yml
-    with:
-      os_type: "ubuntu"
+      os_type: ${{ inputs.os_type }}
     secrets: inherit
