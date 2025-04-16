@@ -69,14 +69,15 @@ jobs:
       - name: Build AMI
         working-directory: ./packer
         run: |
+          # Verify files
           echo "=== VERIFYING FILES ==="
           ls -la ./scripts/
           ls -la ../ansible/playbooks/
           
           # Initialize plugins
-          packer init -upgrade .
+          packer init .
           
-          # Build with correct path references
+          # Build with correct paths
           PACKER_LOG=1 packer build \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
