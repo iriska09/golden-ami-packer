@@ -1,45 +1,15 @@
-required_plugins {
-  amazon = {
-    source  = "github.com/hashicorp/amazon"
-    version = "~> 1.3" # More flexible version constraint
+packer {
+  required_plugins {
+    amazon = {
+      source  = "github.com/hashicorp/amazon"
+      version = "~> 1.3"
+    }
+    ansible = {
+      source  = "github.com/hashicorp/ansible"
+      version = "~> 1.1"
+    }
   }
-  ansible = {
-    source  = "github.com/hashicorp/ansible"
-    version = "~> 1.1" # More flexible version constraint
-  }
 }
-variable "script_path" {
-  type    = string
-  default = "./scripts/bootstrap.sh"  # Changed from bootstrap-ubuntu.sh
-}
-
-variable "playbook_path" {
-  type    = string
-  default = "../ansible/playbooks/cis-hardening.yml"  # Changed from playbook.yml
-}
-
-variable "source_ami" {
-  type        = string
-  description = "Source AMI ID"
-}
-
-variable "subnet_id" {
-  type        = string
-  description = "Subnet ID for temporary instance"
-}
-
-variable "iam_instance_profile" {
-  type        = string
-  description = "IAM instance profile name"
-}
-
-variable "region" {
-  type        = string
-  description = "AWS region"
-  default     = "us-east-1"
-}
-
-
 
 source "amazon-ebs" "ubuntu" {
   ami_name              = "golden-ubuntu-{{timestamp}}"
@@ -80,7 +50,7 @@ build {
 
   provisioner "ansible" {
     playbook_file   = var.playbook_path
-    galaxy_file     = "./ansible/requirements.yml"
+    galaxy_file     = "../ansible/requirements.yml"
     extra_arguments = ["-e", "os_type=ubuntu"]
     user            = "ubuntu"
     use_proxy       = false
