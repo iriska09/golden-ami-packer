@@ -73,15 +73,13 @@ jobs:
           ls -la ./scripts/
           ls -la ../ansible/playbooks/
           
-          # Install plugins
+          # Initialize plugins
           packer init -upgrade .
           
-          # Build with absolute paths
+          # Build with correct path references
           PACKER_LOG=1 packer build \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
             -var "region=${{ secrets.AWS_REGION }}" \
-            -var "script_path=${GITHUB_WORKSPACE}/golden-ami-factory/packer/scripts/bootstrap.sh" \
-            -var "playbook_path=${GITHUB_WORKSPACE}/golden-ami-factory/ansible/playbooks/cis-hardening.yml" \
             templates/${{ inputs.os_type }}.pkr.hcl
