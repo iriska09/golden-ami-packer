@@ -22,11 +22,11 @@ variable "region" {
 variable "script_path" {
   type        = string
   description = "Path to bootstrap script"
-  default     = "./scripts/bootstrap.sh"  # Changed from ${path.root} version
+  default     = "./scripts/bootstrap.sh"
 }
 
 variable "playbook_path" {
   type        = string
   description = "Path to Ansible playbook"
-  default     = "../ansible/playbooks/cis-hardening.yml"  # Changed from ${path.root} version
+  default     = "../ansible/playbooks/cis-hardening.yml"
 }

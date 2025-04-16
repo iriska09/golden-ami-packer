@@ -65,7 +65,6 @@ jobs:
           echo "=== INSTALLED PLUGINS ==="
           packer plugins installed || echo "Plugin check failed - proceeding anyway"
 
-
       - name: Build AMI
         working-directory: ./packer
         run: |
@@ -74,11 +73,12 @@ jobs:
           ls -la ./scripts/
           ls -la ../ansible/playbooks/
           
-          # Initialize plugins
-          packer init .
+          # Initialize plugins with variables file
+          packer init -upgrade .
           
-          # Build with correct paths
+          # Build with explicit variables file
           PACKER_LOG=1 packer build \
+            -var-file="variables.pkr.hcl" \
             -var "source_ami=${{ steps.ami-selector.outputs.SOURCE_AMI }}" \
             -var "subnet_id=${{ secrets.AWS_SUBNET_ID }}" \
             -var "iam_instance_profile=${{ secrets.AWS_IAM_INSTANCE_PROFILE }}" \
