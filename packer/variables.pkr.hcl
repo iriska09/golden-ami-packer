@@ -19,13 +19,13 @@ variable "region" {
   default     = "us-east-1"
 }
 
-required_plugins {
-  amazon = {
-    source  = "github.com/hashicorp/amazon"
-    version = "~> 1.3" # More flexible version constraint
-  }
-  ansible = {
-    source  = "github.com/hashicorp/ansible"
-    version = "~> 1.1" # More flexible version constraint
-  }
-}
+# required_plugins {
+#   amazon = {
+#     source  = "github.com/hashicorp/amazon"
+#     version = "~> 1.3" # More flexible version constraint
+#   }
+#   ansible = {
+#     source  = "github.com/hashicorp/ansible"
+#     version = "~> 1.1" # More flexible version constraint
+#   }
+# }
