@@ -26,4 +26,5 @@ jobs:
       os_type: ${{ github.event.inputs.os_type }}
       region: ${{ github.event.inputs.region }}
       iam_role: ${{ github.event.inputs.iam_role }}
-    secrets: inherit
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}

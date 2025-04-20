@@ -12,9 +12,6 @@ on:
       iam_role:
         required: true
         type: string
-    secrets:
-      AWS_ACCOUNT_ID:
-        required: true
 
 env:
   AWS_REGION: ${{ inputs.region }}
