@@ -21,7 +21,7 @@ on:
 
 jobs:
   call-ami-build:
-    uses: ./.github/workflows/reusable/ami-reusable.yml
+    uses: ./.github/workflows/ami-reusable.yml
     with:
       os_type: ${{ github.event.inputs.os_type }}
       region: ${{ github.event.inputs.region }}
