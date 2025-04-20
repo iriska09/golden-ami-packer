@@ -1,0 +1,86 @@
+---
+- name: Harden Amazon Linux
+  hosts: all
+  become: yes
+  vars:
+    cis_level: 1
+    enable_auditd: true
+
+  tasks:
+    - name: Update all packages to latest versions
+      yum:
+        name: '*'
+        state: latest
+        update_cache: yes
+
+    - name: Install security packages
+      yum:
+        name:
+          - audit
+          - fail2ban
+        state: present
+
+    - name: Configure auditd
+      when: enable_auditd
+      block:
+        - name: Ensure auditd is enabled and running
+          service:
+            name: auditd
+            enabled: yes
+            state: started
+
+        - name: Configure audit rules
+          copy:
+            dest: /etc/audit/audit.rules
+            content: |
+              -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
+              -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
+              -a always,exit -F arch=b64 -S clock_settime -k time-change
+              -a always,exit -F arch=b32 -S clock_settime -k time-change
+              -w /etc/localtime -p wa -k time-change
+
+    - name: Configure automatic security updates
+      cron:
+        name: "Automatic security updates"
+        minute: "0"
+        hour: "2"
+        job: "yum -y --security update-minimal"
+
+    - name: Harden SSH configuration
+      blockinfile:
+        path: /etc/ssh/sshd_config
+        block: |
+          Protocol 2
+          LogLevel INFO
+          X11Forwarding no
+          MaxAuthTries 4
+          IgnoreRhosts yes
+          HostbasedAuthentication no
+          PermitRootLogin no
+          PermitEmptyPasswords no
+          PermitUserEnvironment no
+          ClientAliveInterval 300
+          ClientAliveCountMax 0
+          LoginGraceTime 60
+          Banner /etc/issue.net
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH HARDENING"
+
+    - name: Create security banner
+      copy:
+        dest: /etc/issue.net
+        content: |
+          ***************************************
+          *                                     *
+          *   WARNING: Unauthorized access to   *
+          *   this system is prohibited.        *
+          *                                     *
+          ***************************************
+
+    - name: Restart SSH service
+      service:
+        name: sshd
+        state: restarted
+
+    - name: Configure firewall (security groups are used in AWS)
+      command: echo "Firewall configuration managed by AWS security groups"
+      changed_when: false

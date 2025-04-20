@@ -1,0 +1,29 @@
+name: Build Hardened AMI
+on:
+  workflow_dispatch:
+    inputs:
+      os_type:
+        description: 'Select OS to build'
+        required: true
+        default: 'ubuntu'
+        type: choice
+        options:
+          - ubuntu
+          - amazonlinux
+      region:
+        description: 'AWS region'
+        required: true
+        default: 'us-east-1'
+      iam_role:
+        description: 'IAM role for Packer'
+        required: true
+        default: 'PackerInstanceProfile'
+
+jobs:
+  call-ami-build:
+    uses: ./.github/workflows/reusable/ami-reusable.yml
+    with:
+      os_type: ${{ github.event.inputs.os_type }}
+      region: ${{ github.event.inputs.region }}
+      iam_role: ${{ github.event.inputs.iam_role }}
+    secrets: inherit

@@ -1,0 +1,56 @@
+name: AMI Build Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      os_type:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      iam_role:
+        required: true
+        type: string
+
+env:
+  AWS_REGION: ${{ inputs.region }}
+  PACKER_OS: ${{ inputs.os_type }}
+  IAM_ROLE: ${{ inputs.iam_role }}
+
+jobs:
+  build-ami:
+    name: Build ${{ inputs.os_type }} AMI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ inputs.iam_role }}
+          aws-region: ${{ inputs.region }}
+          role-session-name: GitHubActions-PackerBuild
+
+      - name: Install Packer
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install packer
+
+      - name: Validate Packer template
+        run: |
+          cd packer
+          packer validate ${{ inputs.os_type }}.pkr.hcl
+
+      - name: Build AMI with Packer
+        run: |
+          cd packer
+          packer build \
+            -var-file="../variables/${{ inputs.os_type }}.pkrvars.hcl" \
+            ${{ inputs.os_type }}.pkr.hcl
