@@ -4,7 +4,7 @@ source "amazon-ebs" "ubuntu" {
   region        = "us-east-1"
   source_ami    = "ami-084568db4383264d4"
   ssh_username  = "ubuntu"
-  
+
   tags = {
     Name = "Hardened-Ubuntu"
   }
@@ -17,7 +17,7 @@ build {
     script = "../scripts/ubuntu_bootstrap.sh"
   }
 
-  provisioner "ansible-local" {
+  provisioner "ansible" {
     playbook_file = "../ansible/ubuntu_playbook.yml"
   }
 }
