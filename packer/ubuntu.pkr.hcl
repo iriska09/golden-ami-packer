@@ -5,6 +5,9 @@ source "amazon-ebs" "ubuntu" {
   source_ami    = "ami-084568db4383264d4"
   ssh_username  = "ubuntu"
 
+  vpc_id        = "vpc-0e383fe0b57adbffa" # Replace with your actual VPC ID
+  subnet_id     = "subnet-076188052652f6332" # Replace with your actual Subnet ID
+
   tags = {
     Name = "Hardened-Ubuntu"
   }

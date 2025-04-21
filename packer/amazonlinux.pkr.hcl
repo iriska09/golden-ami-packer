@@ -2,8 +2,11 @@ source "amazon-ebs" "amazonlinux" {
   ami_name      = "hardened-amazonlinux-{{timestamp}}"
   instance_type = "t3.micro"
   region        = "us-east-1"
-  source_ami    = "ami-05f417c208be02d4d"   
+  source_ami    = "ami-05f417c208be02d4d"  
   ssh_username  = "ec2-user"
+
+  vpc_id        = "vpc-0e383fe0b57adbffa"  # Replace with your actual VPC ID
+  subnet_id     = "subnet-076188052652f6332"  # Replace with your actual Subnet ID
 
   tags = {
     Name = "Hardened-AmazonLinux"
