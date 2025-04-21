@@ -29,7 +29,14 @@
         name: fail2ban
         state: present
 
-    - name: Restart SSH service
-      service:
-        name: sshd
+    - name: Ensure SSH is installed
+      ansible.builtin.apt:
+        name: openssh-server
+        state: present
+      when: ansible_service_mgr == "systemd"
+
+    - name: Restart SSH service correctly
+      ansible.builtin.service:
+        name: "{{ 'sshd' if ansible_facts.services['sshd'] is defined else 'ssh' }}"
         state: restarted
+      when: ansible_service_mgr == "systemd"
