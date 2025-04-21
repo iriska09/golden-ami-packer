@@ -1,41 +1,189 @@
+# ---
+# - name: CIS Hardening for Amazon Linux 2023
+#   hosts: all
+#   become: true
+
+#   vars:
+#     ansible_python_interpreter: /usr/bin/python3  # 🚀 Explicitly set correct Python version
+#     ansible_pkg_mgr: dnf  # 🚀 Force correct package manager
+#     sshd_config_path: /etc/ssh/sshd_config
+
+#   tasks:
+#     - name: Disable root login via SSH
+#       lineinfile:
+#         path: "{{ sshd_config_path }}"
+#         regexp: '^PermitRootLogin'
+#         line: 'PermitRootLogin no'
+
+#     - name: Install auditd for system monitoring (Explicitly set DNF backend)
+#       ansible.builtin.dnf:
+#         name: auditd
+#         state: present
+#         use_backend: dnf5
+
+#     - name: Enable auditd
+#       ansible.builtin.service:
+#         name: auditd
+#         enabled: true
+#         state: started
+
+#     - name: Install cronie (for security updates)
+#       ansible.builtin.dnf:
+#         name: cronie
+#         state: present
+#         use_backend: dnf5
+
+#     - name: Configure automatic security updates
+#       ansible.builtin.cron:
+#         name: "Automatic security updates"
+#         minute: "0"
+#         hour: "2"
+#         job: "dnf -y update --security"
+
+
 ---
-- name: CIS Hardening for Amazon Linux 2023
+- name: CIS Level 1 Hardening - Amazon Linux 2023
   hosts: all
   become: true
 
   vars:
-    ansible_python_interpreter: /usr/bin/python3  # 🚀 Explicitly set correct Python version
-    ansible_pkg_mgr: dnf  # 🚀 Force correct package manager
     sshd_config_path: /etc/ssh/sshd_config
 
   tasks:
+
+    # ------------------- ssh configuration -------------------
     - name: Disable root login via SSH
       lineinfile:
         path: "{{ sshd_config_path }}"
         regexp: '^PermitRootLogin'
         line: 'PermitRootLogin no'
 
-    - name: Install auditd for system monitoring (Explicitly set DNF backend)
-      ansible.builtin.dnf:
-        name: auditd
-        state: present
-        use_backend: dnf5
+    - name: Disable password authentication
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication no'
 
-    - name: Enable auditd
-      ansible.builtin.service:
+    - name: Set SSH protocol to 2
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^Protocol'
+        line: 'Protocol 2'
+
+    - name: Restart SSH service to apply changes
+      service:
+        name: sshd
+        state: restarted
+
+    # ------------------- password polices -------------------
+    - name: Set password max days to 90
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MAX_DAYS'
+        line: 'PASS_MAX_DAYS   40'
+
+    - name: Set password min days to 7
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MIN_DAYS'
+        line: 'PASS_MIN_DAYS   7'
+
+    - name: Set warning age for password expiration
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_WARN_AGE'
+        line: 'PASS_WARN_AGE   14'
+
+    - name: Set minimum password length to 14
+      lineinfile:
+        path: /etc/security/pwquality.conf
+        regexp: '^minlen'
+        line: 'minlen = 14'
+
+    # ------------------- audit ad logging -------------------
+    - name: Ensure auditd is installed
+      package:
+        name: audit
+        state: present
+
+    - name: Enable and start auditd
+      service:
         name: auditd
         enabled: true
         state: started
 
-    - name: Install cronie (for security updates)
-      ansible.builtin.dnf:
-        name: cronie
-        state: present
-        use_backend: dnf5
+    - name: Set audit rules file permissions
+      file:
+        path: /etc/audit/audit.rules
+        mode: '0640'
 
-    - name: Configure automatic security updates
-      ansible.builtin.cron:
-        name: "Automatic security updates"
-        minute: "0"
-        hour: "2"
-        job: "dnf -y update --security"
+    - name: Set audit config file permissions
+      file:
+        path: /etc/audit/auditd.conf
+        mode: '0640'
+
+    # ------------------- time -------------------
+    - name: Ensure chrony is installed
+      package:
+        name: chrony
+        state: present
+
+    - name: Enable and start chronyd
+      service:
+        name: chronyd
+        enabled: true
+        state: started
+
+    # ------------------- unused services -------------------
+    - name: Remove telnet (if installed)
+      package:
+        name: telnet
+        state: absent
+
+    - name: Remove rsh (if installed)
+      package:
+        name: rsh
+        state: absent
+
+    - name: Remove talk (if installed)
+      package:
+        name: talk
+        state: absent
+
+    - name: Remove xinetd (if installed)
+      package:
+        name: xinetd
+        state: absent
+
+    # ------------------- permissions -------------------
+    - name: Set /etc/passwd ownership and permissions
+      file:
+        path: /etc/passwd
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set /etc/shadow ownership and permissions
+      file:
+        path: /etc/shadow
+        owner: root
+        group: root
+        mode: '0000'
+
+    - name: Set /etc/group ownership and permissions
+      file:
+        path: /etc/group
+        owner: root
+        group: root
+        mode: '0644'
+
+    # ------------------- Security Tools -------------------
+    - name: Install aide (file integrity checker)
+      package:
+        name: aide
+        state: present
+
+    - name: Initialize AIDE database
+      command: /usr/sbin/aide --init
+      args:
+        creates: /var/lib/aide/aide.db.gz
