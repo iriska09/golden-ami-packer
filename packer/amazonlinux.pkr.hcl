@@ -24,6 +24,7 @@ build {
     playbook_file = "../ansible/amazonlinux_playbook.yml"
     user          = "ec2-user"
     inventory_file = "localhost,"
-    extra_arguments = ["--connection=local", "--verbose"]
+    extra_arguments = ["--connection=local", "--verbose", "-vvv"]  # 🚀 Enable full debug logging
   }
+
 }
