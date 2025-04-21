@@ -1,64 +1,3 @@
-# ---
-# - name: CIS Level 1 Hardening - Amazon Linux 2023
-#   hosts: all
-#   become: true
-
-#   vars:
-#     sshd_config_path: /etc/ssh/sshd_config
-
-#   tasks:
-#     # 1. First ensure system packages and dependencies are in place
-#     - name: Install python3-libdnf5 for Ansible compatibility
-#       ansible.builtin.dnf:
-#         name: python3-libdnf5
-#         state: present
-#         use_backend: dnf5
-
-#     # 2. Install all required packages together for efficiency
-#     - name: Install required system packages
-#       ansible.builtin.dnf:
-#         name:
-#           - audit
-#           - cronie
-#           - fail2ban
-#         state: present
-#         use_backend: dnf5
-
-#     # 3. Configure SSH security settings
-#     - name: Disable root login via SSH
-#       lineinfile:
-#         path: "{{ sshd_config_path }}"
-#         regexp: '^PermitRootLogin'
-#         line: 'PermitRootLogin no'
-#       notify: restart sshd
-
-#     # 4. Configure and enable services
-#     - name: Enable and start auditd
-#       ansible.builtin.service:
-#         name: auditd
-#         enabled: true
-#         state: started
-
-#     - name: Enable and start crond
-#       ansible.builtin.service:
-#         name: crond
-#         enabled: true
-#         state: started
-
-#     # 5. Configure automatic updates
-#     - name: Configure automatic security updates
-#       ansible.builtin.cron:
-#         name: "Automatic security updates"
-#         minute: "0"
-#         hour: "2"
-#         job: "dnf -y update --security"
-
-#   handlers:
-#     - name: restart sshd
-#       ansible.builtin.service:
-#         name: sshd
-#         state: restarted
-
 ---
 - name: CIS Level 1 Hardening - Amazon Linux 2023
   hosts: all
@@ -67,6 +6,7 @@
 
   vars:
     sshd_config_path: /etc/ssh/sshd_config
+    ansible_pkg_mgr: dnf  # Force package manager to dnf
 
   tasks:
     - name: Ensure security packages are installed
@@ -76,6 +16,7 @@
           - cronie
           - fail2ban
         state: present
+        use_backend: dnf5  # Explicitly specify backend
 
     - name: Disable root SSH login
       ansible.builtin.lineinfile:

@@ -2,7 +2,7 @@ source "amazon-ebs" "amazonlinux" {
   ami_name        = "hardened-amazonlinux-{{timestamp}}"
   instance_type   = "t4g.micro"
   region          = "us-east-1"
-  source_ami      = "ami-05f417c208be02d4d"
+  source_ami      = "ami-05f417c208be02d4d"  
   ssh_username    = "ec2-user"
   iam_instance_profile = "PackerInstanceProfile"
 
@@ -33,7 +33,8 @@ build {
     inventory_file = "localhost,"
     extra_arguments = [
       "--connection=local",
-      "-e", "ansible_python_interpreter=/usr/bin/python3"
+      "-e", "ansible_python_interpreter=/usr/bin/python3",
+      "-e", "ansible_pkg_mgr=dnf"  # Force dnf package manager
     ]
   }
 }
