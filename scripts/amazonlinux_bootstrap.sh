@@ -14,3 +14,9 @@ echo "Installing SSM Agent..."
 sudo dnf install -y amazon-ssm-agent
 sudo systemctl enable amazon-ssm-agent
 sudo systemctl start amazon-ssm-agent
+
+# 🚀 **Fix for crontab issue**
+echo "Installing cron (crontab)..."
+sudo dnf install -y cronie
+sudo systemctl enable crond
+sudo systemctl start crond

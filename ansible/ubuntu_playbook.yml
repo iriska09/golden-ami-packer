@@ -24,3 +24,20 @@
         block: |
           Protocol 2
           PermitRootLogin no
+- name: Install cron if missing
+  package:
+    name: cronie
+    state: present
+
+- name: Ensure cron service is running
+  service:
+    name: crond
+    enabled: true
+    state: started
+
+- name: Configure automatic security updates
+  cron:
+    name: "Automatic security updates"
+    minute: "0"
+    hour: "2"
+    job: "dnf -y update --security"

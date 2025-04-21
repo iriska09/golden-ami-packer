@@ -84,3 +84,21 @@
     - name: Configure firewall (security groups are used in AWS)
       command: echo "Firewall configuration managed by AWS security groups"
       changed_when: false
+
+    - name: Install cron if missing
+  package:
+    name: cronie
+    state: present
+
+- name: Ensure cron service is running
+  service:
+    name: crond
+    enabled: true
+    state: started
+
+- name: Configure automatic security updates
+  cron:
+    name: "Automatic security updates"
+    minute: "0"
+    hour: "2"
+    job: "dnf -y update --security"
