@@ -23,18 +23,9 @@ echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.has
 sudo apt-get update
 sudo apt-get install -y packer
 
-# curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-# sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-# sudo apt-get update
-# sudo apt-get install -y packer
+
 
 echo "Cleaning up..."
 sudo apt-get autoremove -y
 sudo apt-get clean
 
-#  🚀 **Fix: Force restart services to prevent deferred service warnings**
-# echo "Restarting necessary services..."
-# sudo systemctl daemon-reexec
-# sudo systemctl restart networkd-dispatcher
-# sudo systemctl restart systemd-logind
-# sudo systemctl restart unattended-upgrades

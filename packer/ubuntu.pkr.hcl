@@ -24,7 +24,7 @@ build {
     script = "../scripts/ubuntu_bootstrap.sh"
   }
 
-  # 🚀 **Fix: Changed Ansible execution method to local**
+  # **Fix: Changed Ansible execution method to local**
   provisioner "ansible" {
     playbook_file = "../ansible/ubuntu_playbook.yml"
     user          = "ubuntu"
