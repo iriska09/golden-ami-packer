@@ -70,7 +70,11 @@ jobs:
       - name: Initialize Packer & Install Plugins
         run: |
           cd packer
-          packer init ubuntu.pkr.hcl  # Ensures plugins like amazon-ebs & ansible are installed
+          packer init ubuntu.pkr.hcl  # 🚀 Explicitly downloads missing plugins (amazon-ebs, ansible)
+
+      - name: Verify Packer Plugins Installed
+        run: |
+          packer plugins list  # 🚀 Check if amazon-ebs and ansible are installed
 
       - name: Run Packer with Debug Mode
         run: |
