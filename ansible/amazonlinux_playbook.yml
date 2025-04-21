@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    ansible_python_interpreter: /usr/bin/python3.12  # 🚀 **Explicitly set the correct Python interpreter**
+    ansible_python_interpreter: /usr/bin/python3  # 🚀 **Explicitly set the correct Python interpreter**
     sshd_config_path: /etc/ssh/sshd_config
 
   tasks:
