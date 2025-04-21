@@ -1,8 +1,8 @@
 source "amazon-ebs" "amazonlinux" {
   ami_name        = "hardened-amazonlinux-{{timestamp}}"
-  instance_type   = "t3.micro"  # Using x86_64 for better compatibility
+  instance_type   = "t3.micro"
   region          = "us-east-1"
-  source_ami      = "ami-0b0dcb5067f052a63"  # Verified AL2023 AMI
+  source_ami      = "ami-05f417c208be02d4d"  
   ssh_username    = "ec2-user"
   iam_instance_profile = "PackerInstanceProfile"
 
@@ -14,10 +14,6 @@ source "amazon-ebs" "amazonlinux" {
     volume_size = 8
     volume_type = "gp3"
     delete_on_termination = true
-  }
-
-  tags = {
-    Name = "Hardened-AmazonLinux"
   }
 }
 
