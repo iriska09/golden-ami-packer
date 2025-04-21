@@ -22,5 +22,10 @@ build {
 
   provisioner "ansible" {
     playbook_file = "../ansible/amazonlinux_playbook.yml"
+    user          = "ec2-user"
+    extra_arguments = [
+      "--verbose", "--inventory", "127.0.0.1,"
+    ]
   }
+
 }

@@ -3,8 +3,11 @@
 # Set strict mode
 set -euo pipefail
 
-# Update system
-echo "Updating system packages..."
+echo "Disabling needrestart to prevent service blocking..."
+echo "NEEDRESTART_MODE=a" | sudo tee /etc/needrestart/needrestart.conf
+
+# Update system packages
+echo "Updating system..."
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 

@@ -22,5 +22,10 @@ build {
 
   provisioner "ansible" {
     playbook_file = "../ansible/ubuntu_playbook.yml"
+    user          = "ubuntu"
+    extra_arguments = [
+      "--verbose", "--inventory", "127.0.0.1,"
+    ]
   }
+
 }
