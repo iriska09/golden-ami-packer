@@ -10,42 +10,23 @@ on:
         options:
           - ubuntu
           - amazonlinux
-      region:
-        description: 'AWS region'
-        required: true
-        default: 'us-east-1'
-      iam_role:
-        description: 'IAM role for Packer'
-        required: true
-        default: 'GitHubActionsPackerRole'
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  build-ami:
-    name: Build ${{ inputs.os_type }} AMI
+  build:
     runs-on: ubuntu-latest
-    environment: production
-    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsPackerRole
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/PackerInstanceProfile
           aws-region: us-east-1
-          audience: sts.amazonaws.com  # THIS IS CRUCIAL
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::767398107227:role/PackerInstanceProfile  # Must match EXACT role name
-          aws-region: us-east-1
-          audience: sts.amazonaws.com  # Critical for OIDC
+          audience: sts.amazonaws.com
 
       - name: Install Packer
         run: |
@@ -53,12 +34,12 @@ jobs:
           sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
           sudo apt-get update && sudo apt-get install packer
 
-      - name: Validate Packer template
+      - name: Initialize Packer plugins
         run: |
           cd packer
-          packer validate ${{ inputs.os_type }}.pkr.hcl
+          packer init .
 
-      - name: Build AMI with Packer
+      - name: Build AMI
         run: |
           cd packer
           packer build \
