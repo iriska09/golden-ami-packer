@@ -13,6 +13,7 @@ source "amazon-ebs" "ubuntu" {
   }
 }
 
+
 build {
   sources = ["source.amazon-ebs.ubuntu"]
 
@@ -20,11 +21,11 @@ build {
     script = "../scripts/ubuntu_bootstrap.sh"
   }
 
-  # provisioner "ansible" {
-  #   playbook_file = "../ansible/ubuntu_playbook.yml"
-  #   user          = "ubuntu"
-  #   inventory_file = "localhost,"
-  #   extra_arguments = ["--connection=local", "--verbose"]
-  # }
-
+  # 🚀 **Fix: Changed Ansible execution method to local**
+  provisioner "ansible" {
+    playbook_file = "../ansible/ubuntu_playbook.yml"
+    user          = "ubuntu"
+    inventory_file = "localhost,"
+    extra_arguments = ["--connection=local", "--verbose"]
+  }
 }
