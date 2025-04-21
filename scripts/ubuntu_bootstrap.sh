@@ -18,12 +18,23 @@ sudo apt-get install -y \
 sudo apt-get purge -y needrestart
 
 echo "Installing Packer..."
-curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
 sudo apt-get update
 sudo apt-get install -y packer
+
+# curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+# sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+# sudo apt-get update
+# sudo apt-get install -y packer
 
 echo "Cleaning up..."
 sudo apt-get autoremove -y
 sudo apt-get clean
 
+ 🚀 **Fix: Force restart services to prevent deferred service warnings**
+echo "Restarting necessary services..."
+sudo systemctl daemon-reexec
+sudo systemctl restart networkd-dispatcher
+sudo systemctl restart systemd-logind
+sudo systemctl restart unattended-upgrades
