@@ -1,26 +1,15 @@
 source "amazon-ebs" "amazonlinux" {
-  ami_name        = "hardened-amazonlinux-{{timestamp}}"
-  instance_type   = "t4g.micro"
-  region          = "us-east-1"
-  source_ami      = "ami-05f417c208be02d4d" # Amazon Linux 2023
-  ssh_username    = "ec2-user"
-  iam_instance_profile = "PackerInstanceProfile"
+  ami_name      = "hardened-amazonlinux-{{timestamp}}"
+  instance_type = "t4g.micro"
+  region        = "us-east-1"
+  source_ami    = "ami-05f417c208be02d4d"  
+  ssh_username  = "ec2-user"
 
-  vpc_id          = "vpc-0e383fe0b57adbffa"
-  subnet_id       = "subnet-076188052652f6332"
-
-  launch_block_device_mappings {
-    device_name = "/dev/xvda"
-    volume_size = 8
-    volume_type = "gp3"
-    delete_on_termination = true
-  }
+  vpc_id        = "vpc-0e383fe0b57adbffa"  # Replace with your actual VPC ID
+  subnet_id     = "subnet-076188052652f6332"  # Replace with your actual Subnet ID
 
   tags = {
-    Name        = "Hardened-AmazonLinux"
-    OS_Version = "Amazon Linux 2023"
-    Release     = "Latest"
-    Environment = "Production"
+    Name = "Hardened-AmazonLinux"
   }
 }
 
@@ -29,32 +18,16 @@ build {
 
   provisioner "shell" {
     script = "../scripts/amazonlinux_bootstrap.sh"
-    environment_vars = [
-      "DEBIAN_FRONTEND=noninteractive",
-      "CHECKPOINT_DISABLE=1"
-    ]
   }
 
   provisioner "ansible" {
     playbook_file = "../ansible/amazonlinux_playbook.yml"
-    user         = "ec2-user"
+    user = "ec2-user"
     inventory_file = "localhost,"
     extra_arguments = [
       "--connection=local",
       "--verbose",
-      "-e", "ansible_python_interpreter=/usr/libexec/platform-python",
-      "-e", "ansible_ssh_user=ec2-user"
-    ]
-    use_proxy     = false
-  }
-
-  provisioner "shell" {
-    inline = [
-      "sudo rm -f /etc/sudoers.d/90-cloud-init-users",
-      "sudo cloud-init clean",
-      "sudo rm -rf /var/lib/cloud/instances",
-      "sudo rm -f /var/log/cloud-init.log",
-      "sudo rm -f /var/log/cloud-init-output.log"
+      "-e", "ansible_python_interpreter=/usr/libexec/platform-python"
     ]
   }
 }
