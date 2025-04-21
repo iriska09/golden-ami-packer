@@ -1,43 +1,3 @@
-# name: Build Hardened AMI
-# on:
-#   workflow_dispatch:
-#     inputs:
-#       os_type:
-#         description: 'Select OS to build'
-#         required: true
-#         type: choice
-#         options:
-#           - ubuntu
-#           - amazonlinux
-
-# permissions:
-#   id-token: write
-#   contents: read
-
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v3
-
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v2
-#         with:
-#           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/PackerInstanceProfile
-#           aws-region: us-east-1
-
-#       - name: Install Packer
-#         run: |
-#           curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-#           sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-#           sudo apt-get update && sudo apt-get install packer
-
-#       - name: Build AMI
-#         run: |
-#           cd packer
-#           packer init .
-#           packer validate ${{ inputs.os_type }}.pkr.hcl
-#           packer build -var-file="../variables/${{ inputs.os_type }}.pkrvars.hcl" ${{ inputs.os_type }}.pkr.hcl
 name: Build Hardened AMI
 on:
   workflow_dispatch:
@@ -49,20 +9,32 @@ on:
         options:
           - ubuntu
           - amazonlinux
-      region:
-        description: 'AWS Region'
-        required: true
-        default: 'us-east-1'
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials (Force SDK v3)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-region: ${{ inputs.region }}
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/PackerInstanceProfile
-          mask-aws-account-id: false
-          role-session-name: "GitHubActionsSession"
+          aws-region: us-east-1
+
+      - name: Install Packer
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install packer
+
+      - name: Build AMI
+        run: |
+          cd packer
+          packer init .
+          packer validate ${{ inputs.os_type }}.pkr.hcl
+          packer build -var-file="../variables/${{ inputs.os_type }}.pkrvars.hcl" ${{ inputs.os_type }}.pkr.hcl
