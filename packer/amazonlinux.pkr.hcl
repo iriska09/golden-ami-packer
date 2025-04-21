@@ -1,8 +1,8 @@
 source "amazon-ebs" "amazonlinux" {
   ami_name        = "hardened-amazonlinux-{{timestamp}}"
-  instance_type   = "t4g.micro"  # Graviton/ARM64 instance type
+  instance_type   = "t4g.micro"
   region          = "us-east-1"
-  source_ami      = "ami-05f417c208be02d4d"  # Your ARM64 AMI
+  source_ami      = "ami-05f417c208be02d4d"
   ssh_username    = "ec2-user"
   iam_instance_profile = "PackerInstanceProfile"
 
@@ -14,10 +14,6 @@ source "amazon-ebs" "amazonlinux" {
     volume_size = 8
     volume_type = "gp3"
     delete_on_termination = true
-  }
-
-  tags = {
-    Name = "Hardened-AmazonLinux-ARM"
   }
 }
 
