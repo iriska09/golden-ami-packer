@@ -13,10 +13,11 @@
         regexp: '^PermitRootLogin'
         line: 'PermitRootLogin no'
 
-    - name: Install auditd for system monitoring (Fixed package name)
+    - name: Install auditd for system monitoring (Force correct package manager)
       ansible.builtin.dnf:
         name: auditd
         state: present
+        use_backend: dnf5  # 🚀 **Explicitly specify dnf5 backend to avoid detection issues**
 
     - name: Enable auditd
       ansible.builtin.service:
@@ -28,6 +29,7 @@
       ansible.builtin.dnf:
         name: cronie
         state: present
+        use_backend: dnf5  # 🚀 **Ensures dnf5 is used for package installation**
 
     - name: Configure automatic security updates
       ansible.builtin.cron:
