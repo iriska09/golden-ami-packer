@@ -4,6 +4,7 @@
   become: true
 
   vars:
+    ansible_python_interpreter: /usr/bin/python3.12  # 🚀 **Explicitly set the correct Python interpreter**
     sshd_config_path: /etc/ssh/sshd_config
 
   tasks:
@@ -13,11 +14,11 @@
         regexp: '^PermitRootLogin'
         line: 'PermitRootLogin no'
 
-    - name: Install auditd for system monitoring (Force correct package manager)
+    - name: Install auditd for system monitoring
       ansible.builtin.dnf:
         name: auditd
         state: present
-        use_backend: dnf5  # 🚀 **Explicitly specify dnf5 backend to avoid detection issues**
+        use_backend: dnf5
 
     - name: Enable auditd
       ansible.builtin.service:
@@ -29,7 +30,7 @@
       ansible.builtin.dnf:
         name: cronie
         state: present
-        use_backend: dnf5  # 🚀 **Ensures dnf5 is used for package installation**
+        use_backend: dnf5
 
     - name: Configure automatic security updates
       ansible.builtin.cron:

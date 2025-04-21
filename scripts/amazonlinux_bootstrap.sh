@@ -5,7 +5,7 @@ echo "Updating system..."
 sudo dnf update -y
 
 echo "Installing essential packages..."
-sudo dnf install -y ansible-core amazon-cloudwatch-agent amazon-ssm-agent cronie fail2ban
+sudo dnf install -y python3 python3-pip python3-libdnf5 ansible amazon-cloudwatch-agent amazon-ssm-agent cronie fail2ban
 
 echo "Configuring services..."
 sudo systemctl enable amazon-ssm-agent
