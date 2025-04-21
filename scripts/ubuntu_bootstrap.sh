@@ -1,21 +1,40 @@
 #!/bin/bash
 set -euo pipefail
 
-# System updates
-sudo dnf update -y
+export DEBIAN_FRONTEND=noninteractive
+echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
 
-# Install required packages
-sudo dnf install -y \
-    python3 \
-    ansible-core \
-    amazon-cloudwatch-agent \
-    amazon-ssm-agent \
-    cronie \
-    fail2ban \
-    audit
+echo "Updating system..."
+sudo apt-get update -y
+sudo apt-get upgrade -y
 
-# Configure services
-sudo systemctl enable --now amazon-ssm-agent crond auditd
+echo "Installing essential packages..."
+sudo apt-get install -y \
+  -o DPkg::Options::="--force-confdef" \
+  -o DPkg::Options::="--force-confold" \
+  python3 python3-pip python3-venv git ansible
 
-# Cleanup
-sudo dnf clean all
+# 🚀 **Fix: Removed needrestart completely**
+sudo apt-get purge -y needrestart
+
+echo "Installing Packer..."
+curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt-get update
+sudo apt-get install -y packer
+
+# curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+# sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+# sudo apt-get update
+# sudo apt-get install -y packer
+
+echo "Cleaning up..."
+sudo apt-get autoremove -y
+sudo apt-get clean
+
+#  🚀 **Fix: Force restart services to prevent deferred service warnings**
+# echo "Restarting necessary services..."
+# sudo systemctl daemon-reexec
+# sudo systemctl restart networkd-dispatcher
+# sudo systemctl restart systemd-logind
+# sudo systemctl restart unattended-upgrades
