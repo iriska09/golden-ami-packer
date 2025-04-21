@@ -43,10 +43,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/PackerInstanceProfile
+          role-to-assume: arn:aws:iam::767398107227:role/PackerInstanceProfile  # Must match EXACT role name
           aws-region: us-east-1
-          role-session-name: GitHubActions-PackerBuild
-          audience: sts.amazonaws.com 
+          audience: sts.amazonaws.com  # Critical for OIDC
 
       - name: Install Packer
         run: |
