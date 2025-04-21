@@ -2,13 +2,8 @@
 - name: Harden Ubuntu Server
   hosts: all
   become: yes
-  vars:
-    cis_level: 1
-    enable_ufw: true
-    enable_auditd: true
-
   tasks:
-    - name: Update all packages to latest versions
+    - name: Update all packages
       apt:
         update_cache: yes
         upgrade: dist
@@ -23,92 +18,9 @@
           - unattended-upgrades
         state: present
 
-    - name: Enable and configure UFW
-      when: enable_ufw
-      block:
-        - name: Enable UFW
-          ufw:
-            state: enabled
-            policy: deny
-
-        - name: Allow SSH
-          ufw:
-            rule: allow
-            port: 22
-            proto: tcp
-
-    - name: Configure auditd
-      when: enable_auditd
-      block:
-        - name: Ensure auditd is enabled and running
-          service:
-            name: auditd
-            enabled: yes
-            state: started
-
-        - name: Configure audit rules
-          copy:
-            dest: /etc/audit/audit.rules
-            content: |
-              -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
-              -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
-              -a always,exit -F arch=b64 -S clock_settime -k time-change
-              -a always,exit -F arch=b32 -S clock_settime -k time-change
-              -w /etc/localtime -p wa -k time-change
-
-    - name: Configure automatic security updates
-      block:
-        - name: Enable unattended-upgrades
-          lineinfile:
-            path: /etc/apt/apt.conf.d/20auto-upgrades
-            line: 'APT::Periodic::Unattended-Upgrade "1";'
-            create: yes
-
-        - name: Configure unattended-upgrades
-          copy:
-            dest: /etc/apt/apt.conf.d/50unattended-upgrades
-            content: |
-              Unattended-Upgrade::Allowed-Origins {
-                  "${distro_id}:${distro_codename}";
-                  "${distro_id}:${distro_codename}-security";
-                  "${distro_id}ESM:${distro_codename}";
-              };
-              Unattended-Upgrade::Package-Blacklist {
-              };
-              Unattended-Upgrade::Automatic-Reboot "true";
-              Unattended-Upgrade::Automatic-Reboot-Time "02:00";
-
     - name: Harden SSH configuration
       blockinfile:
         path: /etc/ssh/sshd_config
         block: |
           Protocol 2
-          LogLevel INFO
-          X11Forwarding no
-          MaxAuthTries 4
-          IgnoreRhosts yes
-          HostbasedAuthentication no
           PermitRootLogin no
-          PermitEmptyPasswords no
-          PermitUserEnvironment no
-          ClientAliveInterval 300
-          ClientAliveCountMax 0
-          LoginGraceTime 60
-          Banner /etc/issue.net
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH HARDENING"
-
-    - name: Create security banner
-      copy:
-        dest: /etc/issue.net
-        content: |
-          ***************************************
-          *                                     *
-          *   WARNING: Unauthorized access to   *
-          *   this system is prohibited.        *
-          *                                     *
-          ***************************************
-
-    - name: Restart SSH service
-      service:
-        name: sshd
-        state: restarted
