@@ -13,7 +13,7 @@
         regexp: '^PermitRootLogin'
         line: 'PermitRootLogin no'
 
-    - name: Set password max days to 90
+    - name: Configure password policies
       lineinfile:
         path: /etc/login.defs
         regexp: '^PASS_MAX_DAYS'
@@ -24,21 +24,10 @@
         name: unattended-upgrades
         state: present
 
-    - name: Configure fail2ban for SSH
-      apt:
+    - name: Install and configure fail2ban
+      package:
         name: fail2ban
         state: present
-
-    - name: Harden SSH login settings
-      blockinfile:
-        path: "{{ sshd_config_path }}"
-        block: |
-          PermitRootLogin no
-          PermitUserEnvironment no
-          MaxAuthTries 4
-          IgnoreRhosts yes
-          LoginGraceTime 60
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH HARDENING"
 
     - name: Restart SSH service
       service:

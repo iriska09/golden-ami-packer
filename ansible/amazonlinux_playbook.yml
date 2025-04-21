@@ -13,7 +13,7 @@
         regexp: '^PermitRootLogin'
         line: 'PermitRootLogin no'
 
-    - name: Ensure auditd is installed
+    - name: Install auditd for system monitoring
       package:
         name: audit
         state: present
