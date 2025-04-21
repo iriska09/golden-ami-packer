@@ -34,7 +34,7 @@ build {
     extra_arguments = [
       "--connection=local",
       "-e", "ansible_python_interpreter=/usr/bin/python3",
-      "-e", "ansible_pkg_mgr=dnf"  # Force dnf package manager
+      "-e", "ansible_pkg_mgr=dnf"  
     ]
   }
 }

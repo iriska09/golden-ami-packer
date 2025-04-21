@@ -14,7 +14,6 @@ sudo apt-get install -y \
   -o DPkg::Options::="--force-confold" \
   python3 python3-pip python3-venv git ansible
 
-# 🚀 **Fix: Removed needrestart completely**
 sudo apt-get purge -y needrestart
 
 echo "Installing Packer..."
