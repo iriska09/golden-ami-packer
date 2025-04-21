@@ -1,14 +1,21 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Updating system..."
+# Update system first
 sudo dnf update -y
 
-echo "Installing essential packages..."
-sudo dnf install -y ansible-core amazon-cloudwatch-agent amazon-ssm-agent cronie fail2ban python3-libdnf5
+# Install required packages (using standard dnf, not dnf5)
+sudo dnf install -y \
+    python3-dnf \
+    ansible-core \
+    amazon-cloudwatch-agent \
+    amazon-ssm-agent \
+    cronie \
+    fail2ban \
+    audit
 
-echo "Configuring services..."
-sudo systemctl enable amazon-ssm-agent
-sudo systemctl start amazon-ssm-agent
-sudo systemctl enable crond
-sudo systemctl start crond
+# Configure essential services
+sudo systemctl enable --now amazon-ssm-agent crond auditd
+
+# Cleanup
+sudo dnf clean all
