@@ -1,93 +1,56 @@
-# ---
-# - name: CIS Hardening for Amazon Linux 2023
-#   hosts: all
-#   become: true
+---
+- name: Harden Amazon Linux 2023 AMI
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Disable password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        state: present
+        backup: yes
 
-#   vars:
-#     ansible_python_interpreter: /usr/bin/python3  # 🚀 Explicitly set correct Python version
-#     ansible_pkg_mgr: dnf  # 🚀 Force correct package manager
-#     sshd_config_path: /etc/ssh/sshd_config
+    - name: Set SSH protocol to 2
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Protocol'
+        line: 'Protocol 2'
+        state: present
+        backup: yes
 
-#   tasks:
-#     - name: Disable root login via SSH
-#       lineinfile:
-#         path: "{{ sshd_config_path }}"
-#         regexp: '^PermitRootLogin'
-#         line: 'PermitRootLogin no'
+    - name: Disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+        backup: yes
 
-#     - name: Install auditd for system monitoring (Explicitly set DNF backend)
-#       ansible.builtin.dnf:
-#         name: auditd
-#         state: present
-#         use_backend: dnf5
+    - name: Disable empty passwords
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitEmptyPasswords'
+        line: 'PermitEmptyPasswords no'
+        state: present
+        backup: yes
 
-#     - name: Enable auditd
-#       ansible.builtin.service:
-#         name: auditd
-#         enabled: true
-#         state: started
+    - name: Set MaxAuthTries to 3
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?MaxAuthTries'
+        line: 'MaxAuthTries 3'
+        state: present
+        backup: yes
 
-#     - name: Install cronie (for security updates)
-#       ansible.builtin.dnf:
-#         name: cronie
-#         state: present
-#         use_backend: dnf5
+    - name: Check if sshd service exists (Amazon Linux 2023)
+      stat:
+        path: /usr/lib/systemd/system/sshd.service
+      register: sshd_service
 
-#     - name: Configure automatic security updates
-#       ansible.builtin.cron:
-#         name: "Automatic security updates"
-#         minute: "0"
-#         hour: "2"
-#         job: "dnf -y update --security"
-
-- name: Disable password authentication
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?PasswordAuthentication'
-    line: 'PasswordAuthentication no'
-    state: present
-    backup: yes
-
-- name: Set SSH protocol to 2
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?Protocol'
-    line: 'Protocol 2'
-    state: present
-    backup: yes
-
-- name: Disable root login
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?PermitRootLogin'
-    line: 'PermitRootLogin no'
-    state: present
-    backup: yes
-
-- name: Disable empty passwords
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?PermitEmptyPasswords'
-    line: 'PermitEmptyPasswords no'
-    state: present
-    backup: yes
-
-- name: Set MaxAuthTries to 3
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?MaxAuthTries'
-    line: 'MaxAuthTries 3'
-    state: present
-    backup: yes
-
-- name: Check if sshd service exists (Amazon Linux 2023)
-  stat:
-    path: /usr/lib/systemd/system/sshd.service
-  register: sshd_service
-
-- name: Restart SSH service if available
-  ansible.builtin.systemd:
-    name: sshd
-    state: restarted
-  when: sshd_service.stat.exists
-  ignore_errors: true
+    - name: Restart SSH service if available
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
+      when: sshd_service.stat.exists
+      ignore_errors: true
