@@ -20,4 +20,5 @@ jobs:
     with:
       os_type: ${{ inputs.os_type }}
       region: ${{ inputs.region }}
-      role_arn: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/PackerInstanceProfile
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
