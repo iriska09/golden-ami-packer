@@ -24,7 +24,7 @@ build {
     playbook_file = "../ansible/ubuntu_playbook.yml"
     user          = "ubuntu"
     inventory_file = "localhost,"
-    extra_arguments = ["--verbose"]
+    extra_arguments = ["--connection=local", "--verbose"]
   }
 
 }
