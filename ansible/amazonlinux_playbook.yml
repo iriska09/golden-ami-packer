@@ -64,6 +64,13 @@
         regexp: '^PasswordAuthentication'
         line: 'PasswordAuthentication no'
 
+    # - name: Restart SSH service to apply changes
+    #   service:
+    #     name: sshd
+    #     state: restarted
+    #   ignore_errors: true
+
+
     - name: Set SSH protocol to 2
       lineinfile:
         path: "{{ sshd_config_path }}"
