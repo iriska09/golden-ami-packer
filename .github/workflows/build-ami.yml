@@ -53,7 +53,6 @@ on:
         description: 'AWS Region'
         required: true
         default: 'us-east-1'
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -70,11 +69,7 @@ jobs:
       - name: Initialize Packer & Install Plugins
         run: |
           cd packer
-          packer init ubuntu.pkr.hcl  # 🚀 Explicitly downloads missing plugins (amazon-ebs, ansible)
-
-      - name: Verify Packer Plugins Installed
-        run: |
-          packer plugins list  # 🚀 Check if amazon-ebs and ansible are installed
+          packer init ubuntu.pkr.hcl  # 🚀 Downloads amazon-ebs & ansible plugins
 
       - name: Run Packer with Debug Mode
         run: |

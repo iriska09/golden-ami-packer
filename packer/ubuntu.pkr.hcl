@@ -1,3 +1,17 @@
+packer {
+  required_plugins {
+    amazon-ebs = {
+      version = ">= 1.0.0"
+      source  = "github.com/hashicorp/amazon"
+    }
+    ansible = {
+      version = ">= 1.0.0"
+      source  = "github.com/hashicorp/ansible"
+    }
+  }
+}
+
+
 source "amazon-ebs" "ubuntu" {
   ami_name      = "hardened-ubuntu-{{timestamp}}"
   instance_type = "t3.micro"
