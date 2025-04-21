@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo 'NEEDRESTART_MODE="a"' | sudo tee /etc/needrestart/needrestart.conf
+# echo 'NEEDRESTART_MODE="a"' | sudo tee /etc/needrestart/needrestart.conf
 
 export DEBIAN_FRONTEND=noninteractive
 
