@@ -59,25 +59,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (Force SDK v3)
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region: ${{ inputs.region }}
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/PackerInstanceProfile
-
-      - name: Install Packer
-        run: |
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-          sudo apt-get update
-          sudo apt-get install -y packer
-
-      - name: Initialize Packer & Install Plugins
-        run: |
-          cd packer
-          packer init ubuntu.pkr.hcl  # 🚀 Ensure plugins like amazon-ebs & ansible are installed
-
-      - name: Run Packer with Debug Mode
-        run: |
-          cd packer
-          PACKER_LOG=1 packer build -debug -var-file="../variables/${{ inputs.os_type }}.pkrvars.hcl" ${{ inputs.os_type }}.pkr.hcl
+          mask-aws-account-id: false
+          role-session-name: "GitHubActionsSession"
