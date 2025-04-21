@@ -33,6 +33,11 @@
 #!/bin/bash
 set -e
 
+echo "Enabling and starting sshd..."
+sudo systemctl enable sshd
+sudo systemctl start sshd
+
+
 echo "Updating system..."
 sudo dnf update -y
 
