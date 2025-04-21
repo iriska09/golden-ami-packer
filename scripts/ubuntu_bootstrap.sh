@@ -32,9 +32,9 @@ echo "Cleaning up..."
 sudo apt-get autoremove -y
 sudo apt-get clean
 
- 🚀 **Fix: Force restart services to prevent deferred service warnings**
-echo "Restarting necessary services..."
-sudo systemctl daemon-reexec
-sudo systemctl restart networkd-dispatcher
-sudo systemctl restart systemd-logind
-sudo systemctl restart unattended-upgrades
+#  🚀 **Fix: Force restart services to prevent deferred service warnings**
+# echo "Restarting necessary services..."
+# sudo systemctl daemon-reexec
+# sudo systemctl restart networkd-dispatcher
+# sudo systemctl restart systemd-logind
+# sudo systemctl restart unattended-upgrades

@@ -13,24 +13,24 @@
         regexp: '^PermitRootLogin'
         line: 'PermitRootLogin no'
 
-    - name: Install auditd for system monitoring
-      package:
-        name: audit
+    - name: Install auditd for system monitoring (Fixed package name)
+      ansible.builtin.dnf:
+        name: auditd
         state: present
 
     - name: Enable auditd
-      service:
+      ansible.builtin.service:
         name: auditd
         enabled: true
         state: started
 
     - name: Install cronie (for security updates)
-      package:
+      ansible.builtin.dnf:
         name: cronie
         state: present
 
     - name: Configure automatic security updates
-      cron:
+      ansible.builtin.cron:
         name: "Automatic security updates"
         minute: "0"
         hour: "2"
