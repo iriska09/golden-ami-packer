@@ -130,9 +130,10 @@
         regexp: '^MaxSessions'
         line: 'MaxSessions 2'
 
+
     - name: Restart SSH service to apply changes
       service:
-        name: sshd
+        name: sshd.service  # Updated service name for Amazon Linux 2023
         state: restarted
 
     # ------------------- password polices -------------------
