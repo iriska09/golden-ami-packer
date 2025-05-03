@@ -75,20 +75,20 @@
       when: not sshd_installed.stat.exists
 
     - name: Verify SSH service name
-      command: systemctl list-unit-files | grep -E '^sshd.*service'
-      register: ssh_service_name
-      changed_when: false
+      shell: systemctl list-unit-files | grep -E "^sshd.*service"
+      register: ssh_service_check
       ignore_errors: yes
 
     - name: Set correct SSH service name fact
       set_fact:
-        ssh_service_name: "{{ 'sshd.service' if 'sshd.service' in ssh_service_name.stdout else 'sshd' }}"
+        ssh_service_name: "{{ 'sshd' if 'sshd.service' in ssh_service_check.stdout else 'ssh' }}"
 
     - name: Ensure SSH service is enabled and running
-      service:
+      systemd:
         name: "{{ ssh_service_name }}"
-        enabled: true
+        enabled: yes
         state: started
+
 
     # ------------------- SSH Configuration -------------------
     - name: Configure SSH settings
