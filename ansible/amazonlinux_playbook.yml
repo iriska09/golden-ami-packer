@@ -1,56 +1,340 @@
----
-- name: Harden Amazon Linux 2023 AMI
-  hosts: localhost
+# ---
+# - name: Harden Amazon Linux 2023 AMI
+#   hosts: localhost
+#   become: true
+#   tasks:
+#     - name: Disable password authentication
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: '^#?PasswordAuthentication'
+#         line: 'PasswordAuthentication no'
+#         state: present
+#         backup: yes
+
+#     - name: Set SSH protocol to 2
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: '^#?Protocol'
+#         line: 'Protocol 2'
+#         state: present
+#         backup: yes
+
+#     - name: Disable root login
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: '^#?PermitRootLogin'
+#         line: 'PermitRootLogin no'
+#         state: present
+#         backup: yes
+
+#     - name: Disable empty passwords
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: '^#?PermitEmptyPasswords'
+#         line: 'PermitEmptyPasswords no'
+#         state: present
+#         backup: yes
+
+#     - name: Set MaxAuthTries to 3
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: '^#?MaxAuthTries'
+#         line: 'MaxAuthTries 3'
+#         state: present
+#         backup: yes
+
+#     - name: Check if sshd service exists (Amazon Linux 2023)
+#       stat:
+#         path: /usr/lib/systemd/system/sshd.service
+#       register: sshd_service
+
+#     - name: Restart SSH service if available
+#       ansible.builtin.systemd:
+#         name: sshd
+#         state: restarted
+#       when: sshd_service.stat.exists
+#       ignore_errors: true
+- name: CIS Level 1 Hardening - Amazon Linux 2023
+  hosts: all
   become: true
+
+  vars:
+    sshd_config_path: /etc/ssh/sshd_config
+
   tasks:
+    # ------------------- ssh configuration -------------------
+    - name: Disable root login via SSH
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+
     - name: Disable password authentication
       lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?PasswordAuthentication'
+        path: "{{ sshd_config_path }}"
+        regexp: '^PasswordAuthentication'
         line: 'PasswordAuthentication no'
-        state: present
-        backup: yes
 
     - name: Set SSH protocol to 2
       lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?Protocol'
+        path: "{{ sshd_config_path }}"
+        regexp: '^Protocol'
         line: 'Protocol 2'
-        state: present
-        backup: yes
 
-    - name: Disable root login
+    # Additional SSH hardening
+    - name: Set SSH ClientAliveInterval
       lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?PermitRootLogin'
-        line: 'PermitRootLogin no'
-        state: present
-        backup: yes
+        path: "{{ sshd_config_path }}"
+        regexp: '^ClientAliveInterval'
+        line: 'ClientAliveInterval 300'
 
-    - name: Disable empty passwords
+    - name: Set SSH ClientAliveCountMax
       lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?PermitEmptyPasswords'
-        line: 'PermitEmptyPasswords no'
-        state: present
-        backup: yes
+        path: "{{ sshd_config_path }}"
+        regexp: '^ClientAliveCountMax'
+        line: 'ClientAliveCountMax 2'
 
-    - name: Set MaxAuthTries to 3
+    - name: Disable SSH TCP forwarding
       lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?MaxAuthTries'
+        path: "{{ sshd_config_path }}"
+        regexp: '^AllowTcpForwarding'
+        line: 'AllowTcpForwarding no'
+
+    - name: Disable SSH Agent forwarding
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^AllowAgentForwarding'
+        line: 'AllowAgentForwarding no'
+
+    - name: Disable SSH X11 forwarding
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^X11Forwarding'
+        line: 'X11Forwarding no'
+
+    - name: Set SSH LogLevel to VERBOSE
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^LogLevel'
+        line: 'LogLevel VERBOSE'
+
+    - name: Set SSH MaxAuthTries to 3
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^MaxAuthTries'
         line: 'MaxAuthTries 3'
-        state: present
-        backup: yes
 
-    - name: Check if sshd service exists (Amazon Linux 2023)
-      stat:
-        path: /usr/lib/systemd/system/sshd.service
-      register: sshd_service
+    - name: Set SSH MaxSessions to 2
+      lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^MaxSessions'
+        line: 'MaxSessions 2'
 
-    - name: Restart SSH service if available
-      ansible.builtin.systemd:
+    - name: Restart SSH service to apply changes
+      service:
         name: sshd
         state: restarted
-      when: sshd_service.stat.exists
-      ignore_errors: true
+
+    # ------------------- password polices -------------------
+    - name: Set password max days to 90
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MAX_DAYS'
+        line: 'PASS_MAX_DAYS 40'
+
+    - name: Set password min days to 7
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MIN_DAYS'
+        line: 'PASS_MIN_DAYS 7'
+
+    - name: Set warning age for password expiration
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_WARN_AGE'
+        line: 'PASS_WARN_AGE 14'
+
+    - name: Set minimum password length to 14
+      lineinfile:
+        path: /etc/security/pwquality.conf
+        regexp: '^minlen'
+        line: 'minlen = 14'
+
+    - name: Set password hashing rounds
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^SHA_CRYPT_MIN_ROUNDS'
+        line: 'SHA_CRYPT_MIN_ROUNDS 640000'
+
+    # ------------------- kernel hardening -------------------
+    - name: Configure kernel parameters
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: yes
+      with_items:
+        - { name: 'fs.protected_fifos', value: '2' }
+        - { name: 'fs.protected_regular', value: '2' }
+        - { name: 'kernel.kptr_restrict', value: '2' }
+        - { name: 'kernel.perf_event_paranoid', value: '3' }
+        - { name: 'kernel.sysrq', value: '0' }
+        - { name: 'kernel.yama.ptrace_scope', value: '1' }
+        - { name: 'net.core.bpf_jit_harden', value: '2' }
+        - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+        - { name: 'net.ipv4.conf.all.log_martians', value: '1' }
+        - { name: 'net.ipv4.conf.all.rp_filter', value: '1' }
+        - { name: 'net.ipv4.conf.all.send_redirects', value: '0' }
+        - { name: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+        - { name: 'net.ipv4.conf.default.log_martians', value: '1' }
+        - { name: 'net.ipv6.conf.all.accept_redirects', value: '0' }
+        - { name: 'net.ipv6.conf.default.accept_redirects', value: '0' }
+
+    # ------------------- audit ad logging -------------------
+    - name: Ensure auditd is installed
+      package:
+        name: audit
+        state: present
+
+    - name: Enable and start auditd
+      service:
+        name: auditd
+        enabled: true
+        state: started
+
+    - name: Set audit rules file permissions
+      file:
+        path: /etc/audit/audit.rules
+        mode: '0640'
+
+    - name: Set audit config file permissions
+      file:
+        path: /etc/audit/auditd.conf
+        mode: '0640'
+
+    - name: Configure remote logging
+      lineinfile:
+        path: /etc/rsyslog.conf
+        line: '*.* @loghost.example.com'
+      notify: restart rsyslog
+
+    # ------------------- time -------------------
+    - name: Ensure chrony is installed
+      package:
+        name: chrony
+        state: present
+
+    - name: Enable and start chronyd
+      service:
+        name: chronyd
+        enabled: true
+        state: started
+
+    # ------------------- unused services -------------------
+    - name: Remove telnet (if installed)
+      package:
+        name: telnet
+        state: absent
+
+    - name: Remove rsh (if installed)
+      package:
+        name: rsh
+        state: absent
+
+    - name: Remove talk (if installed)
+      package:
+        name: talk
+        state: absent
+
+    - name: Remove xinetd (if installed)
+      package:
+        name: xinetd
+        state: absent
+
+    - name: Disable USB storage
+      modprobe:
+        name: usb-storage
+        state: absent
+
+    - name: Disable firewire
+      modprobe:
+        name: firewire-ohci
+        state: absent
+
+    # ------------------- permissions -------------------
+    - name: Set /etc/passwd ownership and permissions
+      file:
+        path: /etc/passwd
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set /etc/shadow ownership and permissions
+      file:
+        path: /etc/shadow
+        owner: root
+        group: root
+        mode: '0000'
+
+    - name: Set /etc/group ownership and permissions
+      file:
+        path: /etc/group
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set strict umask in login.defs
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^UMASK'
+        line: 'UMASK 027'
+
+    # ------------------- security tools -------------------
+    - name: Install rkhunter
+      package:
+        name: rkhunter
+        state: present
+
+    - name: Install aide for file integrity checking
+      package:
+        name: aide
+        state: present
+
+    - name: Initialize AIDE database
+      command: aide --init
+      args:
+        creates: /var/lib/aide/aide.db.new.gz
+
+    - name: Install fail2ban
+      package:
+        name: fail2ban
+        state: present
+
+    # ------------------- banners -------------------
+    - name: Set legal banner for /etc/issue
+      copy:
+        dest: /etc/issue
+        content: |
+          WARNING: Unauthorized access to this system is forbidden and will be
+          prosecuted by law. By accessing this system, you agree that your actions
+          may be monitored if unauthorized usage is suspected.
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set legal banner for /etc/issue.net
+      copy:
+        dest: /etc/issue.net
+        content: |
+          WARNING: Unauthorized access to this system is forbidden and will be
+          prosecuted by law. By accessing this system, you agree that your actions
+          may be monitored if unauthorized usage is suspected.
+        owner: root
+        group: root
+        mode: '0644'
+
+  handlers:
+    - name: restart rsyslog
+      service:
+        name: rsyslog
+        state: restarted
