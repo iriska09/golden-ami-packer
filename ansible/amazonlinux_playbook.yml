@@ -62,19 +62,35 @@
     sshd_config_path: /etc/ssh/sshd_config
 
   tasks:
-    # ------------------- ensure ssh is properly installed -------------------
-    - name: Install OpenSSH server
+    # ------------------- SSH Installation and Setup -------------------
+    - name: Check if OpenSSH server is installed
+      stat:
+        path: /usr/sbin/sshd
+      register: sshd_installed
+
+    - name: Install OpenSSH server if not present
       package:
         name: openssh-server
         state: present
+      when: not sshd_installed.stat.exists
+
+    - name: Verify SSH service name
+      command: systemctl list-unit-files | grep -E '^sshd.*service'
+      register: ssh_service_name
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Set correct SSH service name fact
+      set_fact:
+        ssh_service_name: "{{ 'sshd.service' if 'sshd.service' in ssh_service_name.stdout else 'sshd' }}"
 
     - name: Ensure SSH service is enabled and running
       service:
-        name: sshd
+        name: "{{ ssh_service_name }}"
         enabled: true
         state: started
 
-    # ------------------- ssh configuration -------------------
+    # ------------------- SSH Configuration -------------------
     - name: Configure SSH settings
       block:
         - name: Disable root login via SSH
@@ -98,32 +114,11 @@
             line: 'Protocol 2'
             backup: yes
 
-        - name: Set SSH ClientAliveInterval
-          lineinfile:
-            path: "{{ sshd_config_path }}"
-            regexp: '^ClientAliveInterval'
-            line: 'ClientAliveInterval 300'
-            backup: yes
-
-        - name: Set SSH ClientAliveCountMax
-          lineinfile:
-            path: "{{ sshd_config_path }}"
-            regexp: '^ClientAliveCountMax'
-            line: 'ClientAliveCountMax 2'
-            backup: yes
-
-        - name: Set SSH MaxSessions
-          lineinfile:
-            path: "{{ sshd_config_path }}"
-            regexp: '^MaxSessions'
-            line: 'MaxSessions 2'
-            backup: yes
-
         - name: Restart SSH service to apply changes
           service:
-            name: sshd
+            name: "{{ ssh_service_name }}"
             state: restarted
-      when: "'openssh-server' in ansible_facts.packages"
+      when: sshd_installed.stat.exists or not sshd_installed.stat.exists
 
     # ------------------- password polices -------------------
     - name: Set password max days to 90
