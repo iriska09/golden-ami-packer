@@ -458,10 +458,10 @@
           net.ipv6.conf.default.accept_redirects = 0
       notify: reload sysctl
 
-    # ------------------- Audit and Logging -------------------
+    # ------------------- audit ad logging -------------------
     - name: Ensure auditd is installed
       package:
-        name: audit
+        name: auditd
         state: present
 
     - name: Enable and start auditd
@@ -486,17 +486,6 @@
         line: '*.* @loghost.example.com'
       notify: restart rsyslog
 
-    # ------------------- Time -------------------
-    - name: Ensure chrony is installed
-      package:
-        name: chrony
-        state: present
-
-    - name: Enable and start chronyd
-      service:
-        name: chronyd
-        enabled: true
-        state: started
 
     # ------------------- Unused Services -------------------
     - name: Remove unnecessary packages
