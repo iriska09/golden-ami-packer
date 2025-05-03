@@ -74,10 +74,10 @@
         state: present
       when: not sshd_installed.stat.exists
 
-    - name: Verify SSH service name
-      shell: systemctl list-unit-files | grep -E "^sshd.*service"
+    - name: Verify SSH service name safely
+      shell: systemctl list-unit-files | grep -E "^sshd.*service" || true
       register: ssh_service_check
-      ignore_errors: yes
+      changed_when: false
 
     - name: Set correct SSH service name fact
       set_fact:
@@ -139,12 +139,18 @@
         regexp: '^PASS_WARN_AGE'
         line: 'PASS_WARN_AGE 14'
 
-    - name: Set minimum password length to 14 (only if pwquality.conf exists)
+    - name: Check if pwquality.conf exists
+      stat:
+        path: /etc/security/pwquality.conf
+      register: pwquality_conf
+
+    - name: Set minimum password length to 14
       lineinfile:
         path: /etc/security/pwquality.conf
         regexp: '^minlen'
         line: 'minlen = 14'
-      when: ansible_facts['os_family'] != 'Amazon'
+      when: pwquality_conf.stat.exists
+
 
 
     - name: Set password hashing rounds
