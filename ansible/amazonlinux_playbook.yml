@@ -62,79 +62,68 @@
     sshd_config_path: /etc/ssh/sshd_config
 
   tasks:
-    # ------------------- ssh configuration -------------------
-    - name: Disable root login via SSH
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^PermitRootLogin'
-        line: 'PermitRootLogin no'
+    # ------------------- ensure ssh is properly installed -------------------
+    - name: Install OpenSSH server
+      package:
+        name: openssh-server
+        state: present
 
-    - name: Disable password authentication
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^PasswordAuthentication'
-        line: 'PasswordAuthentication no'
-
-    - name: Set SSH protocol to 2
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^Protocol'
-        line: 'Protocol 2'
-
-    # Additional SSH hardening
-    - name: Set SSH ClientAliveInterval
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^ClientAliveInterval'
-        line: 'ClientAliveInterval 300'
-
-    - name: Set SSH ClientAliveCountMax
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^ClientAliveCountMax'
-        line: 'ClientAliveCountMax 2'
-
-    - name: Disable SSH TCP forwarding
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^AllowTcpForwarding'
-        line: 'AllowTcpForwarding no'
-
-    - name: Disable SSH Agent forwarding
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^AllowAgentForwarding'
-        line: 'AllowAgentForwarding no'
-
-    - name: Disable SSH X11 forwarding
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^X11Forwarding'
-        line: 'X11Forwarding no'
-
-    - name: Set SSH LogLevel to VERBOSE
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^LogLevel'
-        line: 'LogLevel VERBOSE'
-
-    - name: Set SSH MaxAuthTries to 3
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^MaxAuthTries'
-        line: 'MaxAuthTries 3'
-
-    - name: Set SSH MaxSessions to 2
-      lineinfile:
-        path: "{{ sshd_config_path }}"
-        regexp: '^MaxSessions'
-        line: 'MaxSessions 2'
-
-
-    - name: Restart SSH service to apply changes
+    - name: Ensure SSH service is enabled and running
       service:
-        name: sshd.service  # Updated service name for Amazon Linux 2023
-        state: restarted
+        name: sshd
+        enabled: true
+        state: started
+
+    # ------------------- ssh configuration -------------------
+    - name: Configure SSH settings
+      block:
+        - name: Disable root login via SSH
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^PermitRootLogin'
+            line: 'PermitRootLogin no'
+            backup: yes
+
+        - name: Disable password authentication
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^PasswordAuthentication'
+            line: 'PasswordAuthentication no'
+            backup: yes
+
+        - name: Set SSH protocol to 2
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^Protocol'
+            line: 'Protocol 2'
+            backup: yes
+
+        - name: Set SSH ClientAliveInterval
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^ClientAliveInterval'
+            line: 'ClientAliveInterval 300'
+            backup: yes
+
+        - name: Set SSH ClientAliveCountMax
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^ClientAliveCountMax'
+            line: 'ClientAliveCountMax 2'
+            backup: yes
+
+        - name: Set SSH MaxSessions
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^MaxSessions'
+            line: 'MaxSessions 2'
+            backup: yes
+
+        - name: Restart SSH service to apply changes
+          service:
+            name: sshd
+            state: restarted
+      when: "'openssh-server' in ansible_facts.packages"
 
     # ------------------- password polices -------------------
     - name: Set password max days to 90
