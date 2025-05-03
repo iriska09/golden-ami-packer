@@ -139,6 +139,12 @@
         regexp: '^PASS_WARN_AGE'
         line: 'PASS_WARN_AGE 14'
 
+    - name: Install pam_pwquality package
+      package:
+        name: pam_pwquality
+        state: present
+
+
     - name: Set minimum password length to 14
       lineinfile:
         path: /etc/security/pwquality.conf
