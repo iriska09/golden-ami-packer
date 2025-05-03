@@ -547,10 +547,29 @@
         name: aide
         state: present
 
+    - name: Ensure AIDE configuration file is present
+      copy:
+        dest: /etc/aide.conf
+        content: |
+          # /etc/aide.conf
+          database = /var/lib/aide/aide.db
+          database_out = /var/lib/aide/aide.db.new
+          logfile = /var/log/aide/aide.log
+
+          # Default rules
+          /etc   F
+          /bin   F
+          /sbin  F
+          /lib   F
+          /var   F
+        owner: root
+        group: root
+        mode: '0644'
+
     - name: Initialize AIDE database
       command: aide --init
-      args:
-        creates: /var/lib/aide/aide.db.new.gz
+      become: true
+
 
     - name: Install fail2ban
       package:
