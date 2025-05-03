@@ -139,17 +139,13 @@
         regexp: '^PASS_WARN_AGE'
         line: 'PASS_WARN_AGE 14'
 
-    - name: Install pam_pwquality package
-      package:
-        name: pam_pwquality
-        state: present
-
-
-    - name: Set minimum password length to 14
+    - name: Set minimum password length to 14 (only if pwquality.conf exists)
       lineinfile:
         path: /etc/security/pwquality.conf
         regexp: '^minlen'
         line: 'minlen = 14'
+      when: ansible_facts['os_family'] != 'Amazon'
+
 
     - name: Set password hashing rounds
       lineinfile:
