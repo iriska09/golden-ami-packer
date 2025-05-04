@@ -21,6 +21,10 @@ sudo dnf install -y amazon-ssm-agent
 sudo systemctl enable amazon-ssm-agent
 sudo systemctl start amazon-ssm-agent
 
+
+
+
+
 ##checking the script version 
 # Enhanced System Hardening Script
 # Targets Lynis score of 90% or higher
@@ -216,27 +220,29 @@ echo "[6/10] Service Hardening..."
 
 # Disable unnecessary services
 echo "  - Disabling unnecessary services..."
-systemctl disable rpcbind
-if systemctl list-units --type=service | grep -q 'nfs.service'; then
-    sudo systemctl disable nfs.service
-else
-    echo "nfs.service not found, skipping."
-fi
 
-systemctl disable atd
-# Disable avahi-daemon.service if it exists
-if systemctl list-units --type=service | grep -q 'avahi-daemon.service'; then
-    sudo systemctl disable avahi-daemon.service
-else
-    echo "avahi-daemon.service not found, skipping."
-fi
+disable_if_exists() {
+    local service_name=$1
+    if systemctl list-unit-files | grep -q "^$service_name"; then
+        echo "Disabling $service_name..."
+        systemctl disable "$service_name"
+    else
+        echo "$service_name not found, skipping."
+    fi
+}
 
-systemctl disable cups
-systemctl disable dhcpd
-systemctl disable slapd
-systemctl disable named
-systemctl disable vsftpd
-systemctl disable telnet.socket
+# List of services/sockets to disable
+disable_if_exists "rpcbind.service"
+disable_if_exists "nfs.service"
+disable_if_exists "atd.service"
+disable_if_exists "avahi-daemon.service"
+disable_if_exists "cups.service"
+disable_if_exists "dhcpd.service"
+disable_if_exists "slapd.service"
+disable_if_exists "named.service"
+disable_if_exists "vsftpd.service"
+disable_if_exists "telnet.socket"
+
 
 # Configure systemd service hardening
 echo "  - Hardening systemd services..."
