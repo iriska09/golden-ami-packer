@@ -34,7 +34,7 @@ build {
     extra_arguments = [
       "--connection=local",
       "-e", "ansible_python_interpreter=/usr/bin/python3",
-      "-e", "ansible_pkg_mgr=dnf"  
+      "-e", "ansible_pkg_mgr=dnf" , "-u", "ec2-user" 
     ]
   }
 }
