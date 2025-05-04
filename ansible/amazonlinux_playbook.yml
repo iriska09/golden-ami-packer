@@ -254,308 +254,449 @@
 
 #     - name: reload sysctl
 #       command: sysctl --system
-# ---
-# - name: Amazon Linux 2023 Hardening Playbook (CIS + SOC Compliance)
-#   hosts: all
-#   become: true
-#   vars:
-#     cis_level: "1"
-#     enable_soc_compliance: true
-#     min_password_length: 14
-#     password_max_days: 90
-#     ssh_timeout: 300
+---
+- name: Comprehensive System Hardening Playbook
+  hosts: all
+  become: yes
+  vars:
+    ssh_port: 2222
+    ssh_timeout: 300
+    hardening_banner: |
+      ********************************************************************
+      *                                                                  *
+      * This system is for the use of authorized users only.             *
+      * Individuals using this computer system without authority, or in  *
+      * excess of their authority, are subject to having all of their    *
+      * activities on this system monitored and recorded by system       *
+      * personnel.                                                       *
+      *                                                                  *
+      * In the course of monitoring individuals improperly using this     *
+      * system, or in the course of system maintenance, the activities   *
+      * of authorized users may also be monitored.                       *
+      *                                                                  *
+      * Anyone using this system expressly consents to such monitoring   *
+      * and is advised that if such monitoring reveals possible          *
+      * evidence of criminal activity, system personnel may provide the  *
+      * evidence of such monitoring to law enforcement officials.        *
+      *                                                                  *
+      ********************************************************************
 
-#   tasks:
-#     # ========== Package Management ==========
-#     - name: Remove insecure packages
-#       ansible.builtin.package:
-#         name: "{{ item }}"
-#         state: absent
-#       loop:
-#         - telnet
-#         - rsh
-#         - ypbind
-#         - tftp
-#         - talk
-#         - xinetd
-#         - prelink
-#         - vsftpd
+  tasks:
+    # Section 1: Initial Setup
+    - name: Install required packages
+      tags: packages
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - aide
+        - fail2ban
+        - rkhunter
+        - clamav
+        - policycoreutils-python-utils
 
-#     - name: Install base security tools
-#       ansible.builtin.package:
-#         name:
-#           - aide
-#           - rsyslog
-#           - fail2ban
-#         state: present
+    # Section 2: Filesystem Hardening
+    - name: Configure separate partitions (placeholder - adjust for your environment)
+      tags: filesystem
+      block:
+        - name: Ensure /home partition exists
+          mount:
+            path: /home
+            src: /dev/xvdf1
+            fstype: ext4
+            state: present
+            opts: defaults
+        
+        - name: Ensure /var partition exists
+          mount:
+            path: /var
+            src: /dev/xvdg1
+            fstype: ext4
+            state: present
+            opts: defaults
+      when: false  # Set to true and adjust devices if using separate partitions
 
-#     # SCAP Security Guide is not available in default AL2023 repos
-#     - name: Install OpenSCAP tools (alternative to scap-security-guide)
-#       ansible.builtin.package:
-#         name:
-#           - openscap
-#           - openscap-utils
-#           - scap-security-guide-doc
-#         state: present
-#       when: "'amazon' in ansible_distribution | lower"
+    - name: Set secure mount options
+      tags: filesystem
+      lineinfile:
+        path: /etc/fstab
+        backrefs: yes
+        regexp: '^(.*\s/\s+\w+\s+)defaults(\s+.*)$'
+        line: '\1defaults,nodev,nosuid,noexec\2'
+    
+    - name: Set sticky bit for temp directories
+      tags: filesystem
+      file:
+        path: "{{ item }}"
+        mode: a+t
+      loop:
+        - /tmp
+        - /var/tmp
 
-#     # Amazon Linux 2023 uses different audit package structure
-#     - name: Install audit framework
-#       ansible.builtin.package:
-#         name: "{{ item }}"
-#         state: present
-#       loop:
-#         - audit
-#         - audispd-plugins
-#         - libaudit
+    # Section 3: Account and Authentication
+    - name: Configure password policies
+      tags: authentication
+      lineinfile:
+        path: /etc/login.defs
+        regexp: "^{{ item.key }}"
+        line: "{{ item.key }} {{ item.value }}"
+      with_items:
+        - { key: "PASS_MAX_DAYS", value: "90" }
+        - { key: "PASS_MIN_DAYS", value: "7" }
+        - { key: "PASS_WARN_AGE", value: "7" }
+        - { key: "UMASK", value: "027" }
 
-#     - name: Ensure GPG checking is enabled
-#       ansible.builtin.lineinfile:
-#         path: /etc/dnf/dnf.conf
-#         regexp: '^gpgcheck='
-#         line: 'gpgcheck=1'
-#         insertafter: '^\[main\]'
+    - name: Configure password complexity
+      tags: authentication
+      lineinfile:
+        path: /etc/pam.d/system-auth
+        line: "password requisite pam_pwquality.so try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
+        insertafter: '^#%PAM-1.0'
 
-#     - name: Disable USB storage
-#       ansible.builtin.lineinfile:
-#         path: /etc/modprobe.d/disable-usb-storage.conf
-#         line: 'install usb-storage /bin/true'
-#         create: yes
+    - name: Configure account lockout
+      tags: authentication
+      blockinfile:
+        path: /etc/pam.d/system-auth
+        block: |
+          auth required pam_faillock.so preauth silent audit deny=5 unlock_time=900
+          auth [success=1 default=bad] pam_unix.so
+          auth [default=die] pam_faillock.so authfail audit deny=5 unlock_time=900
 
-#     # ========== Filesystem Permissions ==========
-#     - name: Set strict permissions on critical files
-#       ansible.builtin.file:
-#         path: "{{ item.path }}"
-#         owner: "{{ item.owner | default('root') }}"
-#         group: "{{ item.group | default('root') }}"
-#         mode: "{{ item.mode }}"
-#       loop:
-#         - { path: /etc/passwd, mode: '0644' }
-#         - { path: /etc/shadow, mode: '0000' }
-#         - { path: /etc/group, mode: '0644' }
-#         - { path: /etc/gshadow, mode: '0000' }
-#         - { path: /etc/passwd-, mode: '0644' }
-#         - { path: /etc/shadow-, mode: '0000' }
-#         - { path: /etc/group-, mode: '0644' }
-#         - { path: /etc/gshadow-, mode: '0000' }
-#         - { path: /etc/ssh/sshd_config, mode: '0600' }
+    # Section 4: SSH Hardening
+    - name: Configure SSH hardening
+      tags: ssh
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^{{ item.key }}"
+        line: "{{ item.key }} {{ item.value }}"
+        validate: '/usr/sbin/sshd -T -f %s'
+      with_items:
+        - { key: "Protocol", value: "2" }
+        - { key: "LogLevel", value: "VERBOSE" }
+        - { key: "X11Forwarding", value: "no" }
+        - { key: "MaxAuthTries", value: "3" }
+        - { key: "MaxSessions", value: "2" }
+        - { key: "IgnoreRhosts", value: "yes" }
+        - { key: "HostbasedAuthentication", value: "no" }
+        - { key: "PermitRootLogin", value: "no" }
+        - { key: "PermitEmptyPasswords", value: "no" }
+        - { key: "PermitUserEnvironment", value: "no" }
+        - { key: "ClientAliveInterval", value: "{{ ssh_timeout }}" }
+        - { key: "ClientAliveCountMax", value: "0" }
+        - { key: "LoginGraceTime", value: "60" }
+        - { key: "Banner", value: "/etc/issue.net" }
+        - { key: "UsePAM", value: "yes" }
+        - { key: "AllowTcpForwarding", value: "no" }
+        - { key: "AllowAgentForwarding", value: "no" }
+        - { key: "TCPKeepAlive", value: "no" }
+        - { key: "Compression", value: "no" }
+        - { key: "Port", value: "{{ ssh_port }}" }
+        - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
+        - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
+        - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
 
-#     - name: Configure /tmp mount with noexec,nosuid,nodev
-#       ansible.builtin.mount:
-#         path: /tmp
-#         src: /tmp
-#         fstype: tmpfs
-#         opts: defaults,noexec,nosuid,nodev,bind
-#         state: present
+    - name: Create legal banners
+      tags: ssh
+      copy:
+        dest: "{{ item }}"
+        content: "{{ hardening_banner }}"
+      loop:
+        - /etc/issue
+        - /etc/issue.net
 
-#     # ========== Account Policies ==========
-#     - name: Set password policies
-#       ansible.builtin.lineinfile:
-#         path: /etc/security/pwquality.conf
-#         regexp: "^{{ item.key }} ="
-#         line: "{{ item.key }} = {{ item.value }}"
-#       loop:
-#         - { key: "minlen", value: "{{ min_password_length }}" }
-#         - { key: "minclass", value: "4" }
-#         - { key: "maxrepeat", value: "3" }
-#         - { key: "maxsequence", value: "4" }
-#         - { key: "dictcheck", value: "1" }
+    # Section 5: Network Hardening
+    - name: Configure sysctl parameters
+      tags: network
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_set: yes
+        reload: yes
+      with_items:
+        - { key: "kernel.kptr_restrict", value: "2" }
+        - { key: "kernel.dmesg_restrict", value: "1" }
+        - { key: "kernel.perf_event_paranoid", value: "3" }
+        - { key: "kernel.yama.ptrace_scope", value: "2" }
+        - { key: "kernel.core_uses_pid", value: "1" }
+        - { key: "kernel.sysrq", value: "0" }
+        - { key: "fs.protected_fifos", value: "2" }
+        - { key: "fs.protected_regular", value: "2" }
+        - { key: "fs.protected_hardlinks", value: "1" }
+        - { key: "fs.protected_symlinks", value: "1" }
+        - { key: "fs.suid_dumpable", value: "0" }
+        - { key: "net.ipv4.conf.all.accept_redirects", value: "0" }
+        - { key: "net.ipv4.conf.default.accept_redirects", value: "0" }
+        - { key: "net.ipv4.conf.all.send_redirects", value: "0" }
+        - { key: "net.ipv4.conf.default.send_redirects", value: "0" }
+        - { key: "net.ipv4.conf.all.rp_filter", value: "1" }
+        - { key: "net.ipv4.conf.default.rp_filter", value: "1" }
+        - { key: "net.ipv4.tcp_syncookies", value: "1" }
+        - { key: "net.ipv4.tcp_timestamps", value: "0" }
+        - { key: "net.ipv6.conf.all.accept_redirects", value: "0" }
+        - { key: "net.ipv6.conf.default.accept_redirects", value: "0" }
+        - { key: "net.ipv6.conf.all.disable_ipv6", value: "1" }
+        - { key: "net.ipv6.conf.default.disable_ipv6", value: "1" }
+        - { key: "net.core.bpf_jit_harden", value: "2" }
 
-#     - name: Configure password aging
-#       ansible.builtin.lineinfile:
-#         path: /etc/login.defs
-#         regexp: "^{{ item.key }}"
-#         line: "{{ item.key }} {{ item.value }}"
-#       with_items:
-#         - { key: "PASS_MAX_DAYS", value: "{{ password_max_days }}" }
-#         - { key: "PASS_MIN_DAYS", value: "7" }
-#         - { key: "PASS_WARN_AGE", value: "7" }
+    - name: Configure firewall
+      tags: network
+      block:
+        - name: Ensure firewalld is running
+          service:
+            name: firewalld
+            state: started
+            enabled: yes
+        
+        - name: Create hardened zone
+          firewalld:
+            zone: hardened
+            state: present
+            target: DROP
+            permanent: yes
+        
+        - name: Add services to zone
+          firewalld:
+            zone: hardened
+            service: "{{ item }}"
+            permanent: yes
+            state: enabled
+          loop:
+            - ssh
+        
+        - name: Add custom SSH port
+          firewalld:
+            zone: hardened
+            port: "{{ ssh_port }}/tcp"
+            permanent: yes
+            state: enabled
+        
+        - name: Set default zone
+          firewalld:
+            zone: hardened
+            interface: eth0
+            permanent: yes
+            state: enabled
+        
+        - name: Reload firewall
+          command: firewall-cmd --reload
 
-#     - name: Lock inactive accounts after 30 days
-#       ansible.builtin.command: useradd -D -f 30
+    # Section 6: Service Hardening
+    - name: Disable unnecessary services
+      tags: services
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      loop:
+        - rpcbind
+        - nfs
+        - atd
+        - avahi-daemon
+        - cups
+        - dhcpd
+        - slapd
+        - named
+        - vsftpd
+        - telnet.socket
 
-#     - name: Set default umask for users
-#       ansible.builtin.lineinfile:
-#         path: /etc/bashrc
-#         insertafter: '^# umask'
-#         line: 'umask 027'
+    # Section 7: Logging and Auditing
+    - name: Configure audit rules
+      tags: logging
+      copy:
+        dest: /etc/audit/rules.d/hardening.rules
+        content: |
+          # Audit system events
+          -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
+          -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
+          -a always,exit -F arch=b64 -S clock_settime -k time-change
+          -a always,exit -F arch=b32 -S clock_settime -k time-change
+          -w /etc/localtime -p wa -k time-change
 
-#     # ========== SSH Hardening ==========
-#     - name: Configure secure SSH settings
-#       ansible.builtin.lineinfile:
-#         path: /etc/ssh/sshd_config
-#         regexp: "^{{ item.key }}"
-#         line: "{{ item.key }} {{ item.value }}"
-#         validate: /usr/sbin/sshd -t -f %s
-#       loop:
-#         - { key: "Protocol", value: "2" }
-#         - { key: "LogLevel", value: "VERBOSE" }
-#         - { key: "X11Forwarding", value: "no" }
-#         - { key: "MaxAuthTries", value: "4" }
-#         - { key: "IgnoreRhosts", value: "yes" }
-#         - { key: "HostbasedAuthentication", value: "no" }
-#         - { key: "PermitRootLogin", value: "no" }
-#         - { key: "PermitEmptyPasswords", value: "no" }
-#         - { key: "PermitUserEnvironment", value: "no" }
-#         - { key: "ClientAliveInterval", value: "{{ ssh_timeout }}" }
-#         - { key: "ClientAliveCountMax", value: "0" }
-#         - { key: "LoginGraceTime", value: "60" }
-#         - { key: "Banner", value: "/etc/issue.net" }
-#         - { key: "UsePAM", value: "yes" }
-#         - { key: "AllowTcpForwarding", value: "no" }
-#         - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
-#         - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
-#         - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
-#       notify: restart sshd
+          # Audit user/group changes
+          -w /etc/group -p wa -k identity
+          -w /etc/passwd -p wa -k identity
+          -w /etc/gshadow -p wa -k identity
+          -w /etc/shadow -p wa -k identity
+          -w /etc/security/opasswd -p wa -k identity
 
-#     # ========== Network Configuration ==========
-#     - name: Disable IPv6 if not needed
-#       ansible.builtin.sysctl:
-#         name: "{{ item.key }}"
-#         value: "{{ item.value }}"
-#         state: present
-#         reload: yes
-#       loop:
-#         - { key: "net.ipv6.conf.all.disable_ipv6", value: "1" }
-#         - { key: "net.ipv6.conf.default.disable_ipv6", value: "1" }
+          # Audit system network configuration
+          -w /etc/hosts -p wa -k network-modifications
+          -w /etc/sysconfig/network -p wa -k network-modifications
+          -w /etc/sysconfig/network-scripts/ -p wa -k network-modifications
 
-#     - name: Configure secure kernel parameters
-#       ansible.builtin.sysctl:
-#         name: "{{ item.key }}"
-#         value: "{{ item.value }}"
-#         state: present
-#         reload: yes
-#       loop:
-#         - { key: "net.ipv4.ip_forward", value: "0" }
-#         - { key: "net.ipv4.conf.all.send_redirects", value: "0" }
-#         - { key: "net.ipv4.conf.default.send_redirects", value: "0" }
-#         - { key: "net.ipv4.conf.all.accept_source_route", value: "0" }
-#         - { key: "net.ipv4.conf.default.accept_source_route", value: "0" }
-#         - { key: "net.ipv4.conf.all.accept_redirects", value: "0" }
-#         - { key: "net.ipv4.conf.default.accept_redirects", value: "0" }
-#         - { key: "net.ipv4.conf.all.secure_redirects", value: "0" }
-#         - { key: "net.ipv4.conf.default.secure_redirects", value: "0" }
-#         - { key: "net.ipv4.conf.all.log_martians", value: "1" }
-#         - { key: "net.ipv4.conf.default.log_martians", value: "1" }
-#         - { key: "net.ipv4.icmp_echo_ignore_broadcasts", value: "1" }
-#         - { key: "net.ipv4.icmp_ignore_bogus_error_responses", value: "1" }
-#         - { key: "net.ipv4.tcp_syncookies", value: "1" }
-#         - { key: "net.ipv4.tcp_max_syn_backlog", value: "4096" }
-#         - { key: "fs.suid_dumpable", value: "0" }
-#         - { key: "kernel.randomize_va_space", value: "2" }
+          # Audit privileged commands
+          -a always,exit -F path=/usr/sbin/setfiles -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged
 
-#     # ========== Logging and Auditing ==========
-#     - name: Enable auditd service
-#       ansible.builtin.service:
-#         name: auditd
-#         state: started
-#         enabled: yes
+    - name: Restart auditd
+      tags: logging
+      service:
+        name: auditd
+        state: restarted
 
-#     - name: Configure audit rules (SOC compliance)
-#       ansible.builtin.copy:
-#         dest: /etc/audit/rules.d/10-base-config.rules
-#         content: |
-#           ## Remove existing rules
-#           -D
+    - name: Configure rsyslog
+      tags: logging
+      copy:
+        dest: /etc/rsyslog.d/90-hardening.conf
+        content: |
+          *.emerg :omusrmsg:*
+          auth.* /var/log/auth.log
+          authpriv.* /var/log/secure
+          mail.* /var/log/mail.log
+          cron.* /var/log/cron.log
+          *.=warning;*.=err /var/log/warn.log
+          *.crit /var/log/warn.log
+          *.*;mail.none;authpriv.none;cron.none /var/log/messages
 
-#           ## Buffer size
-#           -b 8192
+    - name: Restart rsyslog
+      tags: logging
+      service:
+        name: rsyslog
+        state: restarted
 
-#           ## Monitor system time changes
-#           -a always,exit -F arch=b64 -S adjtimex,settimeofday -F key=time-change
-#           -a always,exit -F arch=b32 -S adjtimex,settimeofday,stime -F key=time-change
-#           -a always,exit -F arch=b64 -S clock_settime -F key=time-change
-#           -w /etc/localtime -p wa -k time-change
+    # Section 8: File Permissions
+    - name: Set critical file permissions
+      tags: fileperms
+      file:
+        path: "{{ item.path }}"
+        mode: "{{ item.mode }}"
+      with_items:
+        - { path: "/etc/passwd", mode: "0644" }
+        - { path: "/etc/shadow", mode: "0600" }
+        - { path: "/etc/group", mode: "0644" }
+        - { path: "/etc/gshadow", mode: "0600" }
+        - { path: "/boot", mode: "0700" }
+        - { path: "/usr/src", mode: "0700" }
+        - { path: "/lib/modules", mode: "0700" }
+        - { path: "/etc/sudoers.d", mode: "0750" }
+        - { path: "/etc/polkit-1/localauthority", mode: "0750" }
+        - { path: "/root", mode: "0700" }
+        - { path: "/root/.ssh/authorized_keys", mode: "0600" }
 
-#           ## Monitor account changes
-#           -w /etc/group -p wa -k identity
-#           -w /etc/passwd -p wa -k identity
-#           -w /etc/gshadow -p wa -k identity
-#           -w /etc/shadow -p wa -k identity
-#           -w /etc/security/opasswd -p wa -k identity
+    # Section 9: Malware Protection
+    - name: Initialize AIDE
+      tags: malware
+      command: aide --init
+      changed_when: false
 
-#           ## Monitor privilege escalation
-#           -a always,exit -F arch=b64 -S setuid,setgid -F key=privileged
+    - name: Install AIDE database
+      tags: malware
+      command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+      when: "'aide.db.new.gz' in lookup('file', '/var/lib/aide/aide.db.new.gz', errors='ignore')"
 
-#           ## Make configuration immutable
-#           -e 2
-#         mode: '0600'
+    - name: Configure AIDE cron job
+      tags: malware
+      cron:
+        name: "AIDE scan"
+        hour: "3"
+        minute: "0"
+        job: "/usr/sbin/aide --check"
 
-#     - name: Load audit rules
-#       ansible.builtin.command: augenrules --load
-#       changed_when: false
+    - name: Update rkhunter database
+      tags: malware
+      command: rkhunter --update
+      changed_when: false
 
-#     - name: Ensure rsyslog is enabled
-#       ansible.builtin.service:
-#         name: rsyslog
-#         state: started
-#         enabled: yes
+    - name: Update rkhunter properties
+      tags: malware
+      command: rkhunter --propupd
+      changed_when: false
 
-#     # ========== PAM Configuration ==========
-#     - name: Configure secure PAM settings
-#       ansible.builtin.copy:
-#         dest: /etc/pam.d/system-auth
-#         content: |
-#           auth        required      pam_faillock.so preauth silent audit deny=5 unlock_time=900
-#           auth        sufficient    pam_unix.so try_first_pass
-#           auth        [default=die] pam_faillock.so authfail audit deny=5 unlock_time=900
-#           auth        required      pam_faillock.so authsucc audit deny=5 unlock_time=900
-#           auth        required      pam_deny.so
+    - name: Configure rkhunter cron job
+      tags: malware
+      cron:
+        name: "rkhunter scan"
+        hour: "2"
+        minute: "0"
+        job: "/usr/bin/rkhunter --check --cronjob"
 
-#           account     required      pam_unix.so
-#           account     sufficient    pam_localuser.so
-#           account     sufficient    pam_succeed_if.so uid < 1000 quiet
-#           account     required      pam_permit.so
+    - name: Update ClamAV database
+      tags: malware
+      command: freshclam
+      changed_when: false
 
-#           password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
-#           password    sufficient    pam_unix.so sha512 shadow try_first_pass use_authtok remember=5
-#           password    required      pam_deny.so
+    - name: Configure ClamAV updates
+      tags: malware
+      cron:
+        name: "ClamAV update"
+        hour: "1"
+        minute: "0"
+        job: "/usr/bin/freshclam --quiet"
 
-#           session     optional      pam_keyinit.so revoke
-#           session     required      pam_limits.so
-#           -session    optional      pam_systemd.so
-#           session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
-#           session     required      pam_unix.so
+    - name: Configure ClamAV scan
+      tags: malware
+      cron:
+        name: "ClamAV full scan"
+        hour: "4"
+        minute: "0"
+        job: "/usr/bin/clamscan --recursive --infected --remove /"
 
-#     # ========== Cron Configuration ==========
-#     - name: Restrict cron to authorized users
-#       ansible.builtin.copy:
-#         dest: /etc/cron.allow
-#         content: |
-#           root
-#         mode: '0600'
+    - name: Configure Fail2Ban
+      tags: malware
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [sshd]
+          enabled = true
+          port = {{ ssh_port }}
+          filter = sshd
+          logpath = /var/log/secure
+          maxretry = 3
+          bantime = 86400
+          findtime = 3600
 
-#     - name: Remove cron.deny if exists
-#       ansible.builtin.file:
-#         path: /etc/cron.deny
-#         state: absent
+    - name: Enable Fail2Ban
+      tags: malware
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes
 
-#     # ========== Additional Security Settings ==========
-#     - name: Initialize AIDE
-#       ansible.builtin.command: |
-#         aide --init
-#         mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
-#       changed_when: false
+    # Section 10: Final Hardening Steps
+    - name: Disable core dumps
+      tags: final
+      lineinfile:
+        path: /etc/security/limits.conf
+        line: "* hard core 0"
+    
+    - name: Disable unnecessary filesystems
+      tags: final
+      copy:
+        dest: /etc/modprobe.d/hardening.conf
+        content: |
+          install cramfs /bin/true
+          install freevxfs /bin/true
+          install jffs2 /bin/true
+          install hfs /bin/true
+          install hfsplus /bin/true
+          install squashfs /bin/true
+          install udf /bin/true
+          install dccp /bin/true
+          install sctp /bin/true
+          install rds /bin/true
+          install tipc /bin/true
+          install usb-storage /bin/true
+          install firewire-ohci /bin/true
 
-#     - name: Set MOTD banner
-#       ansible.builtin.copy:
-#         dest: /etc/motd
-#         content: |
-#           WARNING: Unauthorized access to this system is forbidden and will be
-#           prosecuted by law. By accessing this system, you agree that your actions
-#           may be monitored if unauthorized usage is suspected.
+    - name: Configure DNS resolvers
+      tags: final
+      lineinfile:
+        path: /etc/resolv.conf
+        line: "nameserver {{ item }}"
+      loop:
+        - "8.8.8.8"
+        - "1.1.1.1"
 
-#     - name: Set issue.net banner (for SSH)
-#       ansible.builtin.copy:
-#         dest: /etc/issue.net
-#         content: |
-#           Unauthorized access prohibited. All activity may be monitored and reported.
+    - name: Configure /etc/hosts
+      tags: final
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ ansible_default_ipv4.address }} {{ ansible_hostname }} {{ ansible_hostname.split('.')[0] }}"
 
-#   handlers:
-#     - name: restart sshd
-#       ansible.builtin.service:
-#         name: sshd
-#         state: restarted
-
-#     - name: reload sysctl
-#       ansible.builtin.command: sysctl --system
+  post_tasks:
+    - name: Reboot system (if needed)
+      tags: reboot
+      reboot:
+        msg: "Reboot initiated by Ansible for system hardening"
+        connect_timeout: 5
+      when: reboot_required.stat.exists
