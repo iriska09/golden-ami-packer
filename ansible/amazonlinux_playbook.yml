@@ -328,12 +328,25 @@
       file:
         path: "{{ item }}"
         state: directory
-        mode: '0755'
         owner: root
         group: root
-      loop:
+        mode: '0755'
+      with_items:
         - /var/lib/aide
         - /var/log/aide
+
+    - name: Initialize AIDE database
+      command: aide --init
+      creates: /var/lib/aide/aide.db.gz
+
+    - name: Move the new AIDE database into place
+      command: mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db.gz
+
+    - name: Validate AIDE config (optional check-only run)
+      command: aide --check --config=/etc/aide.conf
+      register: aide_check
+      failed_when: aide_check.rc != 0
+
 
     - name: Deploy secure AIDE configuration
       copy:
