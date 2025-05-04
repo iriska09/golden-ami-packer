@@ -47,12 +47,21 @@ dnf install -y aide fail2ban rkhunter clamav
 # 2. Filesystem Hardening
 echo "[2/10] Filesystem Hardening..."
 
-# Separate partitions
-echo "  - Configuring separate partitions..."
-grep -q /home /etc/fstab || echo "/dev/xvdf1 /home ext4 defaults 0 0" >> /etc/fstab
-grep -q /var /etc/fstab || echo "/dev/xvdg1 /var ext4 defaults 0 0" >> /etc/fstab
-mount -a
+# Filesystem mount options
+echo "  - Setting secure mount options..."
 
+# Only apply mount options if mount points already exist in /etc/fstab
+sed -i '/\/[[:space:]]/s/defaults/defaults,nodev,nosuid,noexec/' /etc/fstab || true
+sed -i '/\/boot[[:space:]]/s/defaults/defaults,nodev,nosuid/' /etc/fstab || true
+sed -i '/\/home[[:space:]]/s/defaults/defaults,nodev/' /etc/fstab || true
+sed -i '/\/var[[:space:]]/s/defaults/defaults,nodev,nosuid/' /etc/fstab || true
+
+# Don't add or mount non-existing devices
+echo "  - Skipping addition of separate partitions to avoid disk errors..."
+
+# Sticky bit for world-writable directories
+echo "  - Setting sticky bits..."
+chmod +t /tmp /var/tmp
 # Filesystem mount options
 echo "  - Setting secure mount options..."
 sed -i '/\/ /s/defaults/defaults,nodev,nosuid,noexec/' /etc/fstab
