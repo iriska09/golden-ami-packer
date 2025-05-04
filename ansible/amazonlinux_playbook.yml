@@ -338,20 +338,22 @@
           @@define DBDIR /var/lib/aide
           @@define LOGDIR /var/log
 
-          /bin    NORMAL
-          /sbin   NORMAL
-          /lib    NORMAL
-          /lib64  NORMAL
-          /usr    NORMAL
-          /etc    NORMAL
-          /boot   NORMAL
-          /opt    NORMAL
-          /root   NORMAL
-          /var    NORMAL
+          # Custom rule definition
+          @@define CUSTOMRULE p+i+n+u+g+s+b+m+c+md5+sha256
 
-          =p+i+n+u+g+s+b+m+c+md5+sha256
+          /bin    CUSTOMRULE
+          /sbin   CUSTOMRULE
+          /lib    CUSTOMRULE
+          /lib64  CUSTOMRULE
+          /usr    CUSTOMRULE
+          /etc    CUSTOMRULE
+          /boot   CUSTOMRULE
+          /opt    CUSTOMRULE
+          /root   CUSTOMRULE
+          /var    CUSTOMRULE
         force: true
         mode: "0600"
+
 
     - name: Initialize AIDE
       command: aide --init --config=/etc/aide.conf
