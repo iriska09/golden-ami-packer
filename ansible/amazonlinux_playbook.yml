@@ -319,66 +319,65 @@
           net.ipv6.conf.default.accept_redirects = 0
       notify: reload sysctl
 
-    # File Integrity Monitoring with AIDE
     - name: Ensure AIDE is installed
       package:
         name: aide
         state: present
 
-    - name: Find aide binary
-      command: which aide
-      register: aide_path
-      changed_when: false
-      failed_when: aide_path.stdout == ""
-
-    - name: Create AIDE directories if they don't exist
+    - name: Create AIDE log and db directories
       file:
         path: "{{ item }}"
         state: directory
-        mode: "0700"
+        mode: '0755'
+        owner: root
+        group: root
       loop:
         - /var/lib/aide
         - /var/log/aide
 
-    - name: Harden AIDE configuration
+    - name: Deploy secure AIDE configuration
       copy:
-        dest: "{{ aide_config_path }}"
+        dest: /etc/aide.conf
+        owner: root
+        group: root
+        mode: '0644'
         content: |
-          database=file:/var/lib/aide/aide.db.gz
-          database_out=file:/var/lib/aide/aide.db.new.gz
+          database_out=file:/var/lib/aide/aide.db.gz
           gzip_dbout=yes
-          report_url=file:/var/log/aide/aide.log
           report_url=stdout
-          log_level=info
-          report_level=info
 
           @@define DBDIR /var/lib/aide
           @@define LOGDIR /var/log/aide
 
-          @@define CUSTOMRULE p+i+n+u+g+s+b+m+c+md5+sha256
+          /etc    NORMAL
+          /bin    NORMAL
+          /sbin   NORMAL
+          /usr    NORMAL
 
-          /bin    CUSTOMRULE
-          /sbin   CUSTOMRULE
-          /lib    CUSTOMRULE
-          /lib64  CUSTOMRULE
-          /usr    CUSTOMRULE
-          /etc    CUSTOMRULE
-          /boot   CUSTOMRULE
-          /opt    CUSTOMRULE
-          /root   CUSTOMRULE
-          /var    CUSTOMRULE
-        mode: "0600"
+    - name: Validate AIDE config (optional check-only run)
+      command: /usr/bin/aide --check --config=/etc/aide.conf
+      register: aide_check
+      ignore_errors: true
+
+    - name: Fail if AIDE config is invalid before init
+      fail:
+        msg: "AIDE configuration file has errors. Fix before initializing."
+      when: aide_check.rc != 0
 
     - name: Initialize AIDE database
-      command: "{{ aide_path.stdout }} --init --config={{ aide_config_path }}"
+      command: /usr/bin/aide --init --config=/etc/aide.conf
       register: aide_init
-      changed_when: aide_init.rc == 0
+      failed_when: aide_init.rc != 0
+      changed_when: true
 
-    - name: Install AIDE database
-      command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
-      when: aide_init.rc == 0
-      args:
-        creates: /var/lib/aide/aide.db.gz
+    - name: Rename initial database to final location
+      copy:
+        src: /var/lib/aide/aide.db.new.gz
+        dest: /var/lib/aide/aide.db.gz
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0600'
 
     - name: Install rkhunter
       package:
