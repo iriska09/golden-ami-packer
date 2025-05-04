@@ -224,7 +224,13 @@ else
 fi
 
 systemctl disable atd
-systemctl disable avahi-daemon
+# Disable avahi-daemon.service if it exists
+if systemctl list-units --type=service | grep -q 'avahi-daemon.service'; then
+    sudo systemctl disable avahi-daemon.service
+else
+    echo "avahi-daemon.service not found, skipping."
+fi
+
 systemctl disable cups
 systemctl disable dhcpd
 systemctl disable slapd
