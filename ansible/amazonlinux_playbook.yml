@@ -264,7 +264,6 @@
     aide_config_path: /etc/aide.conf
 
   tasks:
-    # SSH Hardening
     - name: Ensure OpenSSH server is installed
       package:
         name: openssh-server
@@ -293,7 +292,6 @@
         marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH HARDENING"
       notify: restart sshd
 
-    # Kernel Hardening
     - name: Configure kernel parameters
       copy:
         dest: /etc/sysctl.d/99-hardening.conf
@@ -321,31 +319,42 @@
           net.ipv6.conf.default.accept_redirects = 0
       notify: reload sysctl
 
-    # File Integrity Monitoring with AIDE
-    - name: Install AIDE
-      package:
-        name: aide
-        state: present
+    - name: Harden AIDE configuration
+      copy:
+        dest: /etc/aide.conf
+        content: |
+          database=file:/var/lib/aide/aide.db.gz
+          database_out=file:/var/lib/aide/aide.db.new.gz
+          gzip_dbout=yes
+          report_url=stdout
+          verbose=5
 
-    - name: Initialize AIDE database
-      command: aide --init --config={{ aide_config_path }}
-      args:
-        creates: /var/lib/aide/aide.db.new.gz
+          @@define DBDIR /var/lib/aide
+          @@define LOGDIR /var/log
 
-    - name: Rename AIDE database to activate it
+          /bin    NORMAL
+          /sbin   NORMAL
+          /lib    NORMAL
+          /lib64  NORMAL
+          /usr    NORMAL
+          /etc    NORMAL
+          /boot   NORMAL
+          /opt    NORMAL
+          /root   NORMAL
+          /var    NORMAL
+
+          =p+i+n+u+g+s+b+m+c+md5+sha256
+        force: true
+        mode: "0600"
+
+    - name: Initialize AIDE
+      command: aide --init --config=/etc/aide.conf
+
+    - name: Move AIDE DB
       command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
       args:
-        removes: /var/lib/aide/aide.db.gz
         creates: /var/lib/aide/aide.db.gz
 
-    - name: Setup AIDE cron job
-      cron:
-        name: "AIDE integrity check"
-        minute: "0"
-        hour: "5"
-        job: "/usr/sbin/aide --check --config={{ aide_config_path }}"
-
-    # Malware Scanning
     - name: Install rkhunter
       package:
         name: rkhunter
@@ -361,7 +370,6 @@
         hour: "4"
         job: "/usr/bin/rkhunter --cronjob --report-warnings-only"
 
-    # Service Hardening
     - name: Disable unnecessary services
       service:
         name: "{{ item }}"
@@ -380,7 +388,6 @@
         regexp: '^#?UMask='
         line: 'UMask=027'
 
-    # Password and Login Policy
     - name: Configure password policy
       blockinfile:
         path: /etc/login.defs
@@ -392,7 +399,6 @@
           SHA_CRYPT_MIN_ROUNDS 640000
         marker: "# {mark} ANSIBLE MANAGED BLOCK - PASSWORD POLICIES"
 
-    # Secure Limits
     - name: Configure secure limits
       copy:
         dest: /etc/security/limits.d/hardening.conf
@@ -401,7 +407,6 @@
           * hard maxlogins 10
           * hard nproc 512
 
-    # Network Hardening - Firewalld
     - name: Install firewalld
       package:
         name: firewalld
@@ -424,11 +429,7 @@
         state: restarted
 
     - name: reload sysctl
-      ansible.builtin.sysctl:
-        name: ''
-        sysctl_file: /etc/sysctl.d/99-hardening.conf
-        reload: yes
+      command: sysctl --system
 
     - name: reload firewall
       command: firewall-cmd --reload
- 
