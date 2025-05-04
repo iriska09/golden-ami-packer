@@ -319,6 +319,12 @@
           net.ipv6.conf.default.accept_redirects = 0
       notify: reload sysctl
 
+    # File Integrity Monitoring with AIDE
+    - name: Ensure AIDE is installed
+      package:
+        name: aide
+        state: present
+
     - name: Harden AIDE configuration
       copy:
         dest: /etc/aide.conf
@@ -354,6 +360,7 @@
       command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
       args:
         creates: /var/lib/aide/aide.db.gz
+
 
     - name: Install rkhunter
       package:
