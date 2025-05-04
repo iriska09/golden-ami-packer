@@ -25,7 +25,11 @@ build {
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive"
     ]
+    inline = [
+      "sudo bash ../scripts/amazonlinux_bootstrap.sh"  # Run the script with sudo
+    ]
   }
+
 
   provisioner "ansible" {
     playbook_file = "../ansible/amazonlinux_playbook.yml"
