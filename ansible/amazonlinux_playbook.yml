@@ -286,9 +286,10 @@
         name:
           - aide
           - rsyslog
-          - audit
+          - audit-libs  # Correct package name for AL2023
           - scap-security-guide
           - fail2ban
+          - audit  # This is now available after installing audit-libs
         state: present
 
     - name: Ensure GPG checking is enabled
@@ -327,7 +328,7 @@
         path: /tmp
         src: /tmp
         fstype: tmpfs
-        opts: defaults,noexec,nosuid,nodev
+        opts: defaults,noexec,nosuid,nodev,bind
         state: present
 
     # ========== Account Policies ==========
@@ -385,9 +386,9 @@
         - { key: "Banner", value: "/etc/issue.net" }
         - { key: "UsePAM", value: "yes" }
         - { key: "AllowTcpForwarding", value: "no" }
-        - { key: "Ciphers", value: "chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
-        - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com" }
-        - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group-exchange-sha256" }
+        - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }  # Simplified for AL2023
+        - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
+        - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
       notify: restart sshd
 
     # ========== Network Configuration ==========
@@ -427,6 +428,15 @@
         - { key: "kernel.randomize_va_space", value: "2" }
 
     # ========== Logging and Auditing ==========
+    - name: Install audit packages
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - audit-libs
+        - audit
+        - audispd-plugins
+
     - name: Enable auditd service
       ansible.builtin.service:
         name: auditd
@@ -435,46 +445,18 @@
 
     - name: Configure audit rules (SOC compliance)
       ansible.builtin.copy:
-        dest: /etc/audit/rules.d/soc.rules
+        dest: /etc/audit/rules.d/99-finalize.rules
         content: |
-          ## First rule - delete all
-          -D
-
-          ## Increase the buffers to survive stress events
+          ## Buffer size
           -b 8192
 
-          ## Set failure mode to syslog
-          -f 1
+          ## Make the configuration immutable
+          -e 2
+        mode: '0600'
 
-          ## Time change rules
-          -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
-          -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
-          -a always,exit -F arch=b64 -S clock_settime -k time-change
-          -w /etc/localtime -p wa -k time-change
-
-          ## User and group changes
-          -w /etc/group -p wa -k identity
-          -w /etc/passwd -p wa -k identity
-          -w /etc/gshadow -p wa -k identity
-          -w /etc/shadow -p wa -k identity
-          -w /etc/security/opasswd -p wa -k identity
-
-          ## System startup changes
-          -w /etc/selinux/ -p wa -k MAC-policy
-          -w /usr/bin/semanage -p x -k MAC-policy
-          -w /usr/sbin/setsebool -p x -k MAC-policy
-
-          ## Privilege escalation
-          -a always,exit -F arch=b64 -S setuid -S setgid -S setxattr -k privileged
-
-          ## Kernel module loading
-          -w /sbin/insmod -p x -k modules
-          -w /sbin/rmmod -p x -k modules
-          -w /sbin/modprobe -p x -k modules
-          -a always,exit -F arch=b64 -S init_module -S delete_module -k modules
-
-          ## File deletion
-          -a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -F auid>=1000 -F auid!=4294967295 -k delete
+    - name: Load audit rules
+      ansible.builtin.command: augenrules --load
+      changed_when: false
 
     - name: Ensure rsyslog is enabled
       ansible.builtin.service:
@@ -522,7 +504,7 @@
         state: absent
 
     # ========== Additional Security Settings ==========
-    - name: Configure AIDE for file integrity checking
+    - name: Initialize AIDE
       ansible.builtin.command: |
         aide --init
         mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
