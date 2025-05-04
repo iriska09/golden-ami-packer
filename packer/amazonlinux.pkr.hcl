@@ -22,10 +22,12 @@ build {
 
   provisioner "shell" {
     script = "../scripts/amazonlinux_bootstrap.sh"
+    execute_command = "sudo -E bash '{{ .Path }}'"
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive"
     ]
   }
+
 
   provisioner "ansible" {
     playbook_file = "../ansible/amazonlinux_playbook.yml"
