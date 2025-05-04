@@ -340,6 +340,7 @@
         dest: /etc/aide.conf
         content: |
           database_out=file:/var/lib/aide/aide.db.gz
+          database_in=file:/var/lib/aide/aide.db.gz  # Added to fix the issue
           report_url=stdout
 
           @@define DBDIR /var/lib/aide
