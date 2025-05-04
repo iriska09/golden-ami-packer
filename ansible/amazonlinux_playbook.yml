@@ -1,24 +1,24 @@
 
-# - name: CIS Level 1 Hardening - Amazon Linux 2023
-#   hosts: all
-#   become: true
+- name: CIS Level 1 Hardening - Amazon Linux 2023
+  hosts: all
+  become: true
 
-#   vars:
-#     sshd_config_path: /etc/ssh/sshd_config
+  vars:
+    sshd_config_path: /etc/ssh/sshd_config
 
-#   tasks:
+  tasks:
 
-#     # ------------------- SSH Installation and Setup -------------------
-#     - name: Check if OpenSSH server is installed
-#       stat:
-#         path: /usr/sbin/sshd
-#       register: sshd_installed
+    # ------------------- SSH Installation and Setup -------------------
+    - name: Check if OpenSSH server is installed
+      stat:
+        path: /usr/sbin/sshd
+      register: sshd_installed
 
-#     - name: Install OpenSSH server if not present
-#       package:
-#         name: openssh-server
-#         state: present
-#       when: not sshd_installed.stat.exists
+    - name: Install OpenSSH server if not present
+      package:
+        name: openssh-server
+        state: present
+      when: not sshd_installed.stat.exists
 
 #     - name: Verify SSH service name
 #       shell: systemctl list-unit-files | grep -E "^sshd.*service" || true
@@ -254,308 +254,308 @@
 
 #     - name: reload sysctl
 #       command: sysctl --system
----
-- name: Amazon Linux 2023 Hardening Playbook (CIS + SOC Compliance)
-  hosts: all
-  become: true
-  vars:
-    cis_level: "1"
-    enable_soc_compliance: true
-    min_password_length: 14
-    password_max_days: 90
-    ssh_timeout: 300
+# ---
+# - name: Amazon Linux 2023 Hardening Playbook (CIS + SOC Compliance)
+#   hosts: all
+#   become: true
+#   vars:
+#     cis_level: "1"
+#     enable_soc_compliance: true
+#     min_password_length: 14
+#     password_max_days: 90
+#     ssh_timeout: 300
 
-  tasks:
-    # ========== Package Management ==========
-    - name: Remove insecure packages
-      ansible.builtin.package:
-        name: "{{ item }}"
-        state: absent
-      loop:
-        - telnet
-        - rsh
-        - ypbind
-        - tftp
-        - talk
-        - xinetd
-        - prelink
-        - vsftpd
+#   tasks:
+#     # ========== Package Management ==========
+#     - name: Remove insecure packages
+#       ansible.builtin.package:
+#         name: "{{ item }}"
+#         state: absent
+#       loop:
+#         - telnet
+#         - rsh
+#         - ypbind
+#         - tftp
+#         - talk
+#         - xinetd
+#         - prelink
+#         - vsftpd
 
-    - name: Install base security tools
-      ansible.builtin.package:
-        name:
-          - aide
-          - rsyslog
-          - fail2ban
-        state: present
+#     - name: Install base security tools
+#       ansible.builtin.package:
+#         name:
+#           - aide
+#           - rsyslog
+#           - fail2ban
+#         state: present
 
-    # SCAP Security Guide is not available in default AL2023 repos
-    - name: Install OpenSCAP tools (alternative to scap-security-guide)
-      ansible.builtin.package:
-        name:
-          - openscap
-          - openscap-utils
-          - scap-security-guide-doc
-        state: present
-      when: "'amazon' in ansible_distribution | lower"
+#     # SCAP Security Guide is not available in default AL2023 repos
+#     - name: Install OpenSCAP tools (alternative to scap-security-guide)
+#       ansible.builtin.package:
+#         name:
+#           - openscap
+#           - openscap-utils
+#           - scap-security-guide-doc
+#         state: present
+#       when: "'amazon' in ansible_distribution | lower"
 
-    # Amazon Linux 2023 uses different audit package structure
-    - name: Install audit framework
-      ansible.builtin.package:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - audit
-        - audispd-plugins
-        - libaudit
+#     # Amazon Linux 2023 uses different audit package structure
+#     - name: Install audit framework
+#       ansible.builtin.package:
+#         name: "{{ item }}"
+#         state: present
+#       loop:
+#         - audit
+#         - audispd-plugins
+#         - libaudit
 
-    - name: Ensure GPG checking is enabled
-      ansible.builtin.lineinfile:
-        path: /etc/dnf/dnf.conf
-        regexp: '^gpgcheck='
-        line: 'gpgcheck=1'
-        insertafter: '^\[main\]'
+#     - name: Ensure GPG checking is enabled
+#       ansible.builtin.lineinfile:
+#         path: /etc/dnf/dnf.conf
+#         regexp: '^gpgcheck='
+#         line: 'gpgcheck=1'
+#         insertafter: '^\[main\]'
 
-    - name: Disable USB storage
-      ansible.builtin.lineinfile:
-        path: /etc/modprobe.d/disable-usb-storage.conf
-        line: 'install usb-storage /bin/true'
-        create: yes
+#     - name: Disable USB storage
+#       ansible.builtin.lineinfile:
+#         path: /etc/modprobe.d/disable-usb-storage.conf
+#         line: 'install usb-storage /bin/true'
+#         create: yes
 
-    # ========== Filesystem Permissions ==========
-    - name: Set strict permissions on critical files
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        owner: "{{ item.owner | default('root') }}"
-        group: "{{ item.group | default('root') }}"
-        mode: "{{ item.mode }}"
-      loop:
-        - { path: /etc/passwd, mode: '0644' }
-        - { path: /etc/shadow, mode: '0000' }
-        - { path: /etc/group, mode: '0644' }
-        - { path: /etc/gshadow, mode: '0000' }
-        - { path: /etc/passwd-, mode: '0644' }
-        - { path: /etc/shadow-, mode: '0000' }
-        - { path: /etc/group-, mode: '0644' }
-        - { path: /etc/gshadow-, mode: '0000' }
-        - { path: /etc/ssh/sshd_config, mode: '0600' }
+#     # ========== Filesystem Permissions ==========
+#     - name: Set strict permissions on critical files
+#       ansible.builtin.file:
+#         path: "{{ item.path }}"
+#         owner: "{{ item.owner | default('root') }}"
+#         group: "{{ item.group | default('root') }}"
+#         mode: "{{ item.mode }}"
+#       loop:
+#         - { path: /etc/passwd, mode: '0644' }
+#         - { path: /etc/shadow, mode: '0000' }
+#         - { path: /etc/group, mode: '0644' }
+#         - { path: /etc/gshadow, mode: '0000' }
+#         - { path: /etc/passwd-, mode: '0644' }
+#         - { path: /etc/shadow-, mode: '0000' }
+#         - { path: /etc/group-, mode: '0644' }
+#         - { path: /etc/gshadow-, mode: '0000' }
+#         - { path: /etc/ssh/sshd_config, mode: '0600' }
 
-    - name: Configure /tmp mount with noexec,nosuid,nodev
-      ansible.builtin.mount:
-        path: /tmp
-        src: /tmp
-        fstype: tmpfs
-        opts: defaults,noexec,nosuid,nodev,bind
-        state: present
+#     - name: Configure /tmp mount with noexec,nosuid,nodev
+#       ansible.builtin.mount:
+#         path: /tmp
+#         src: /tmp
+#         fstype: tmpfs
+#         opts: defaults,noexec,nosuid,nodev,bind
+#         state: present
 
-    # ========== Account Policies ==========
-    - name: Set password policies
-      ansible.builtin.lineinfile:
-        path: /etc/security/pwquality.conf
-        regexp: "^{{ item.key }} ="
-        line: "{{ item.key }} = {{ item.value }}"
-      loop:
-        - { key: "minlen", value: "{{ min_password_length }}" }
-        - { key: "minclass", value: "4" }
-        - { key: "maxrepeat", value: "3" }
-        - { key: "maxsequence", value: "4" }
-        - { key: "dictcheck", value: "1" }
+#     # ========== Account Policies ==========
+#     - name: Set password policies
+#       ansible.builtin.lineinfile:
+#         path: /etc/security/pwquality.conf
+#         regexp: "^{{ item.key }} ="
+#         line: "{{ item.key }} = {{ item.value }}"
+#       loop:
+#         - { key: "minlen", value: "{{ min_password_length }}" }
+#         - { key: "minclass", value: "4" }
+#         - { key: "maxrepeat", value: "3" }
+#         - { key: "maxsequence", value: "4" }
+#         - { key: "dictcheck", value: "1" }
 
-    - name: Configure password aging
-      ansible.builtin.lineinfile:
-        path: /etc/login.defs
-        regexp: "^{{ item.key }}"
-        line: "{{ item.key }} {{ item.value }}"
-      with_items:
-        - { key: "PASS_MAX_DAYS", value: "{{ password_max_days }}" }
-        - { key: "PASS_MIN_DAYS", value: "7" }
-        - { key: "PASS_WARN_AGE", value: "7" }
+#     - name: Configure password aging
+#       ansible.builtin.lineinfile:
+#         path: /etc/login.defs
+#         regexp: "^{{ item.key }}"
+#         line: "{{ item.key }} {{ item.value }}"
+#       with_items:
+#         - { key: "PASS_MAX_DAYS", value: "{{ password_max_days }}" }
+#         - { key: "PASS_MIN_DAYS", value: "7" }
+#         - { key: "PASS_WARN_AGE", value: "7" }
 
-    - name: Lock inactive accounts after 30 days
-      ansible.builtin.command: useradd -D -f 30
+#     - name: Lock inactive accounts after 30 days
+#       ansible.builtin.command: useradd -D -f 30
 
-    - name: Set default umask for users
-      ansible.builtin.lineinfile:
-        path: /etc/bashrc
-        insertafter: '^# umask'
-        line: 'umask 027'
+#     - name: Set default umask for users
+#       ansible.builtin.lineinfile:
+#         path: /etc/bashrc
+#         insertafter: '^# umask'
+#         line: 'umask 027'
 
-    # ========== SSH Hardening ==========
-    - name: Configure secure SSH settings
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: "^{{ item.key }}"
-        line: "{{ item.key }} {{ item.value }}"
-        validate: /usr/sbin/sshd -t -f %s
-      loop:
-        - { key: "Protocol", value: "2" }
-        - { key: "LogLevel", value: "VERBOSE" }
-        - { key: "X11Forwarding", value: "no" }
-        - { key: "MaxAuthTries", value: "4" }
-        - { key: "IgnoreRhosts", value: "yes" }
-        - { key: "HostbasedAuthentication", value: "no" }
-        - { key: "PermitRootLogin", value: "no" }
-        - { key: "PermitEmptyPasswords", value: "no" }
-        - { key: "PermitUserEnvironment", value: "no" }
-        - { key: "ClientAliveInterval", value: "{{ ssh_timeout }}" }
-        - { key: "ClientAliveCountMax", value: "0" }
-        - { key: "LoginGraceTime", value: "60" }
-        - { key: "Banner", value: "/etc/issue.net" }
-        - { key: "UsePAM", value: "yes" }
-        - { key: "AllowTcpForwarding", value: "no" }
-        - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
-        - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
-        - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
-      notify: restart sshd
+#     # ========== SSH Hardening ==========
+#     - name: Configure secure SSH settings
+#       ansible.builtin.lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: "^{{ item.key }}"
+#         line: "{{ item.key }} {{ item.value }}"
+#         validate: /usr/sbin/sshd -t -f %s
+#       loop:
+#         - { key: "Protocol", value: "2" }
+#         - { key: "LogLevel", value: "VERBOSE" }
+#         - { key: "X11Forwarding", value: "no" }
+#         - { key: "MaxAuthTries", value: "4" }
+#         - { key: "IgnoreRhosts", value: "yes" }
+#         - { key: "HostbasedAuthentication", value: "no" }
+#         - { key: "PermitRootLogin", value: "no" }
+#         - { key: "PermitEmptyPasswords", value: "no" }
+#         - { key: "PermitUserEnvironment", value: "no" }
+#         - { key: "ClientAliveInterval", value: "{{ ssh_timeout }}" }
+#         - { key: "ClientAliveCountMax", value: "0" }
+#         - { key: "LoginGraceTime", value: "60" }
+#         - { key: "Banner", value: "/etc/issue.net" }
+#         - { key: "UsePAM", value: "yes" }
+#         - { key: "AllowTcpForwarding", value: "no" }
+#         - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
+#         - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
+#         - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
+#       notify: restart sshd
 
-    # ========== Network Configuration ==========
-    - name: Disable IPv6 if not needed
-      ansible.builtin.sysctl:
-        name: "{{ item.key }}"
-        value: "{{ item.value }}"
-        state: present
-        reload: yes
-      loop:
-        - { key: "net.ipv6.conf.all.disable_ipv6", value: "1" }
-        - { key: "net.ipv6.conf.default.disable_ipv6", value: "1" }
+#     # ========== Network Configuration ==========
+#     - name: Disable IPv6 if not needed
+#       ansible.builtin.sysctl:
+#         name: "{{ item.key }}"
+#         value: "{{ item.value }}"
+#         state: present
+#         reload: yes
+#       loop:
+#         - { key: "net.ipv6.conf.all.disable_ipv6", value: "1" }
+#         - { key: "net.ipv6.conf.default.disable_ipv6", value: "1" }
 
-    - name: Configure secure kernel parameters
-      ansible.builtin.sysctl:
-        name: "{{ item.key }}"
-        value: "{{ item.value }}"
-        state: present
-        reload: yes
-      loop:
-        - { key: "net.ipv4.ip_forward", value: "0" }
-        - { key: "net.ipv4.conf.all.send_redirects", value: "0" }
-        - { key: "net.ipv4.conf.default.send_redirects", value: "0" }
-        - { key: "net.ipv4.conf.all.accept_source_route", value: "0" }
-        - { key: "net.ipv4.conf.default.accept_source_route", value: "0" }
-        - { key: "net.ipv4.conf.all.accept_redirects", value: "0" }
-        - { key: "net.ipv4.conf.default.accept_redirects", value: "0" }
-        - { key: "net.ipv4.conf.all.secure_redirects", value: "0" }
-        - { key: "net.ipv4.conf.default.secure_redirects", value: "0" }
-        - { key: "net.ipv4.conf.all.log_martians", value: "1" }
-        - { key: "net.ipv4.conf.default.log_martians", value: "1" }
-        - { key: "net.ipv4.icmp_echo_ignore_broadcasts", value: "1" }
-        - { key: "net.ipv4.icmp_ignore_bogus_error_responses", value: "1" }
-        - { key: "net.ipv4.tcp_syncookies", value: "1" }
-        - { key: "net.ipv4.tcp_max_syn_backlog", value: "4096" }
-        - { key: "fs.suid_dumpable", value: "0" }
-        - { key: "kernel.randomize_va_space", value: "2" }
+#     - name: Configure secure kernel parameters
+#       ansible.builtin.sysctl:
+#         name: "{{ item.key }}"
+#         value: "{{ item.value }}"
+#         state: present
+#         reload: yes
+#       loop:
+#         - { key: "net.ipv4.ip_forward", value: "0" }
+#         - { key: "net.ipv4.conf.all.send_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.default.send_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.all.accept_source_route", value: "0" }
+#         - { key: "net.ipv4.conf.default.accept_source_route", value: "0" }
+#         - { key: "net.ipv4.conf.all.accept_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.default.accept_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.all.secure_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.default.secure_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.all.log_martians", value: "1" }
+#         - { key: "net.ipv4.conf.default.log_martians", value: "1" }
+#         - { key: "net.ipv4.icmp_echo_ignore_broadcasts", value: "1" }
+#         - { key: "net.ipv4.icmp_ignore_bogus_error_responses", value: "1" }
+#         - { key: "net.ipv4.tcp_syncookies", value: "1" }
+#         - { key: "net.ipv4.tcp_max_syn_backlog", value: "4096" }
+#         - { key: "fs.suid_dumpable", value: "0" }
+#         - { key: "kernel.randomize_va_space", value: "2" }
 
-    # ========== Logging and Auditing ==========
-    - name: Enable auditd service
-      ansible.builtin.service:
-        name: auditd
-        state: started
-        enabled: yes
+#     # ========== Logging and Auditing ==========
+#     - name: Enable auditd service
+#       ansible.builtin.service:
+#         name: auditd
+#         state: started
+#         enabled: yes
 
-    - name: Configure audit rules (SOC compliance)
-      ansible.builtin.copy:
-        dest: /etc/audit/rules.d/10-base-config.rules
-        content: |
-          ## Remove existing rules
-          -D
+#     - name: Configure audit rules (SOC compliance)
+#       ansible.builtin.copy:
+#         dest: /etc/audit/rules.d/10-base-config.rules
+#         content: |
+#           ## Remove existing rules
+#           -D
 
-          ## Buffer size
-          -b 8192
+#           ## Buffer size
+#           -b 8192
 
-          ## Monitor system time changes
-          -a always,exit -F arch=b64 -S adjtimex,settimeofday -F key=time-change
-          -a always,exit -F arch=b32 -S adjtimex,settimeofday,stime -F key=time-change
-          -a always,exit -F arch=b64 -S clock_settime -F key=time-change
-          -w /etc/localtime -p wa -k time-change
+#           ## Monitor system time changes
+#           -a always,exit -F arch=b64 -S adjtimex,settimeofday -F key=time-change
+#           -a always,exit -F arch=b32 -S adjtimex,settimeofday,stime -F key=time-change
+#           -a always,exit -F arch=b64 -S clock_settime -F key=time-change
+#           -w /etc/localtime -p wa -k time-change
 
-          ## Monitor account changes
-          -w /etc/group -p wa -k identity
-          -w /etc/passwd -p wa -k identity
-          -w /etc/gshadow -p wa -k identity
-          -w /etc/shadow -p wa -k identity
-          -w /etc/security/opasswd -p wa -k identity
+#           ## Monitor account changes
+#           -w /etc/group -p wa -k identity
+#           -w /etc/passwd -p wa -k identity
+#           -w /etc/gshadow -p wa -k identity
+#           -w /etc/shadow -p wa -k identity
+#           -w /etc/security/opasswd -p wa -k identity
 
-          ## Monitor privilege escalation
-          -a always,exit -F arch=b64 -S setuid,setgid -F key=privileged
+#           ## Monitor privilege escalation
+#           -a always,exit -F arch=b64 -S setuid,setgid -F key=privileged
 
-          ## Make configuration immutable
-          -e 2
-        mode: '0600'
+#           ## Make configuration immutable
+#           -e 2
+#         mode: '0600'
 
-    - name: Load audit rules
-      ansible.builtin.command: augenrules --load
-      changed_when: false
+#     - name: Load audit rules
+#       ansible.builtin.command: augenrules --load
+#       changed_when: false
 
-    - name: Ensure rsyslog is enabled
-      ansible.builtin.service:
-        name: rsyslog
-        state: started
-        enabled: yes
+#     - name: Ensure rsyslog is enabled
+#       ansible.builtin.service:
+#         name: rsyslog
+#         state: started
+#         enabled: yes
 
-    # ========== PAM Configuration ==========
-    - name: Configure secure PAM settings
-      ansible.builtin.copy:
-        dest: /etc/pam.d/system-auth
-        content: |
-          auth        required      pam_faillock.so preauth silent audit deny=5 unlock_time=900
-          auth        sufficient    pam_unix.so try_first_pass
-          auth        [default=die] pam_faillock.so authfail audit deny=5 unlock_time=900
-          auth        required      pam_faillock.so authsucc audit deny=5 unlock_time=900
-          auth        required      pam_deny.so
+#     # ========== PAM Configuration ==========
+#     - name: Configure secure PAM settings
+#       ansible.builtin.copy:
+#         dest: /etc/pam.d/system-auth
+#         content: |
+#           auth        required      pam_faillock.so preauth silent audit deny=5 unlock_time=900
+#           auth        sufficient    pam_unix.so try_first_pass
+#           auth        [default=die] pam_faillock.so authfail audit deny=5 unlock_time=900
+#           auth        required      pam_faillock.so authsucc audit deny=5 unlock_time=900
+#           auth        required      pam_deny.so
 
-          account     required      pam_unix.so
-          account     sufficient    pam_localuser.so
-          account     sufficient    pam_succeed_if.so uid < 1000 quiet
-          account     required      pam_permit.so
+#           account     required      pam_unix.so
+#           account     sufficient    pam_localuser.so
+#           account     sufficient    pam_succeed_if.so uid < 1000 quiet
+#           account     required      pam_permit.so
 
-          password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
-          password    sufficient    pam_unix.so sha512 shadow try_first_pass use_authtok remember=5
-          password    required      pam_deny.so
+#           password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
+#           password    sufficient    pam_unix.so sha512 shadow try_first_pass use_authtok remember=5
+#           password    required      pam_deny.so
 
-          session     optional      pam_keyinit.so revoke
-          session     required      pam_limits.so
-          -session    optional      pam_systemd.so
-          session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
-          session     required      pam_unix.so
+#           session     optional      pam_keyinit.so revoke
+#           session     required      pam_limits.so
+#           -session    optional      pam_systemd.so
+#           session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
+#           session     required      pam_unix.so
 
-    # ========== Cron Configuration ==========
-    - name: Restrict cron to authorized users
-      ansible.builtin.copy:
-        dest: /etc/cron.allow
-        content: |
-          root
-        mode: '0600'
+#     # ========== Cron Configuration ==========
+#     - name: Restrict cron to authorized users
+#       ansible.builtin.copy:
+#         dest: /etc/cron.allow
+#         content: |
+#           root
+#         mode: '0600'
 
-    - name: Remove cron.deny if exists
-      ansible.builtin.file:
-        path: /etc/cron.deny
-        state: absent
+#     - name: Remove cron.deny if exists
+#       ansible.builtin.file:
+#         path: /etc/cron.deny
+#         state: absent
 
-    # ========== Additional Security Settings ==========
-    - name: Initialize AIDE
-      ansible.builtin.command: |
-        aide --init
-        mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
-      changed_when: false
+#     # ========== Additional Security Settings ==========
+#     - name: Initialize AIDE
+#       ansible.builtin.command: |
+#         aide --init
+#         mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+#       changed_when: false
 
-    - name: Set MOTD banner
-      ansible.builtin.copy:
-        dest: /etc/motd
-        content: |
-          WARNING: Unauthorized access to this system is forbidden and will be
-          prosecuted by law. By accessing this system, you agree that your actions
-          may be monitored if unauthorized usage is suspected.
+#     - name: Set MOTD banner
+#       ansible.builtin.copy:
+#         dest: /etc/motd
+#         content: |
+#           WARNING: Unauthorized access to this system is forbidden and will be
+#           prosecuted by law. By accessing this system, you agree that your actions
+#           may be monitored if unauthorized usage is suspected.
 
-    - name: Set issue.net banner (for SSH)
-      ansible.builtin.copy:
-        dest: /etc/issue.net
-        content: |
-          Unauthorized access prohibited. All activity may be monitored and reported.
+#     - name: Set issue.net banner (for SSH)
+#       ansible.builtin.copy:
+#         dest: /etc/issue.net
+#         content: |
+#           Unauthorized access prohibited. All activity may be monitored and reported.
 
-  handlers:
-    - name: restart sshd
-      ansible.builtin.service:
-        name: sshd
-        state: restarted
+#   handlers:
+#     - name: restart sshd
+#       ansible.builtin.service:
+#         name: sshd
+#         state: restarted
 
-    - name: reload sysctl
-      ansible.builtin.command: sysctl --system
+#     - name: reload sysctl
+#       ansible.builtin.command: sysctl --system
