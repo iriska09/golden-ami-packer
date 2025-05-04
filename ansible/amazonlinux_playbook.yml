@@ -286,9 +286,18 @@
         name:
           - aide
           - rsyslog
-          - scap-security-guide
           - fail2ban
         state: present
+
+    # SCAP Security Guide is not available in default AL2023 repos
+    - name: Install OpenSCAP tools (alternative to scap-security-guide)
+      ansible.builtin.package:
+        name:
+          - openscap
+          - openscap-utils
+          - scap-security-guide-doc
+        state: present
+      when: "'amazon' in ansible_distribution | lower"
 
     # Amazon Linux 2023 uses different audit package structure
     - name: Install audit framework
