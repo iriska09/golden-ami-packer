@@ -338,21 +338,32 @@
     - name: Deploy secure AIDE configuration
       copy:
         dest: /etc/aide.conf
-        owner: root
-        group: root
-        mode: '0644'
         content: |
           database_out=file:/var/lib/aide/aide.db.gz
-          gzip_dbout=yes
           report_url=stdout
 
           @@define DBDIR /var/lib/aide
           @@define LOGDIR /var/log/aide
 
+          NORMAL = p+i+n+u+g+s+m+c+acl+selinux+xattrs+sha512
+
           /etc    NORMAL
           /bin    NORMAL
           /sbin   NORMAL
-          /usr    NORMAL
+          /usr/bin NORMAL
+          /usr/sbin NORMAL
+
+          !/proc
+          !/sys
+          !/dev
+          !/run
+          !/var/log/lastlog
+          !/var/log/wtmp
+          !/var/log/btmp
+        owner: root
+        group: root
+        mode: '0640'
+
 
     - name: Validate AIDE config (optional check-only run)
       command: /usr/bin/aide --check --config=/etc/aide.conf
