@@ -254,15 +254,17 @@
 
 #     - name: reload sysctl
 #       command: sysctl --system
+---
 - name: CIS Level 1 Hardening - Amazon Linux 2023
   hosts: all
   become: true
 
   vars:
     sshd_config_path: /etc/ssh/sshd_config
+    aide_config_path: /etc/aide.conf
 
   tasks:
-    # ------------------- SSH Hardening -------------------
+    # SSH Hardening
     - name: Ensure OpenSSH server is installed
       package:
         name: openssh-server
@@ -291,19 +293,16 @@
         marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH HARDENING"
       notify: restart sshd
 
-    # ------------------- Kernel Hardening -------------------
+    # Kernel Hardening
     - name: Configure kernel parameters
       copy:
         dest: /etc/sysctl.d/99-hardening.conf
         content: |
-          # File system protections
           fs.protected_fifos = 2
           fs.protected_regular = 2
           fs.protected_hardlinks = 1
           fs.protected_symlinks = 1
           fs.suid_dumpable = 0
-
-          # Kernel protections
           kernel.kptr_restrict = 2
           kernel.perf_event_paranoid = 3
           kernel.yama.ptrace_scope = 1
@@ -311,8 +310,6 @@
           kernel.dmesg_restrict = 1
           kernel.randomize_va_space = 2
           kernel.unprivileged_bpf_disabled = 1
-
-          # Network hardening
           net.ipv4.conf.all.accept_redirects = 0
           net.ipv4.conf.default.accept_redirects = 0
           net.ipv4.conf.all.log_martians = 1
@@ -324,66 +321,67 @@
           net.ipv6.conf.default.accept_redirects = 0
       notify: reload sysctl
 
-    # ------------------- File Integrity Monitoring -------------------
-    - name: Install and configure AIDE
-      block:
-        - name: Install AIDE
-          package:
-            name: aide
-            state: present
+    # File Integrity Monitoring with AIDE
+    - name: Install AIDE
+      package:
+        name: aide
+        state: present
 
-        - name: Initialize AIDE database
-          command: aide --init
-          args:
-            creates: /var/lib/aide/aide.db.new.gz
+    - name: Initialize AIDE database
+      command: aide --init --config={{ aide_config_path }}
+      args:
+        creates: /var/lib/aide/aide.db.new.gz
 
-        - name: Install AIDE cron job
-          cron:
-            name: "AIDE check"
-            minute: "0"
-            hour: "5"
-            job: "/usr/sbin/aide --check"
+    - name: Rename AIDE database to activate it
+      command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+      args:
+        removes: /var/lib/aide/aide.db.gz
+        creates: /var/lib/aide/aide.db.gz
 
-    # ------------------- Malware Scanning -------------------
-    - name: Install and configure rkhunter
-      block:
-        - name: Install rkhunter
-          package:
-            name: rkhunter
-            state: present
+    - name: Setup AIDE cron job
+      cron:
+        name: "AIDE integrity check"
+        minute: "0"
+        hour: "5"
+        job: "/usr/sbin/aide --check --config={{ aide_config_path }}"
 
-        - name: Update rkhunter database
-          command: rkhunter --update
+    # Malware Scanning
+    - name: Install rkhunter
+      package:
+        name: rkhunter
+        state: present
 
-        - name: Configure daily scan
-          cron:
-            name: "RKHunter scan"
-            minute: "30"
-            hour: "4"
-            job: "/usr/bin/rkhunter --cronjob --report-warnings-only"
+    - name: Update rkhunter database
+      command: rkhunter --update
 
-    # ------------------- Service Hardening -------------------
-    - name: Harden system services
-      block:
-        - name: Disable unnecessary services
-          service:
-            name: "{{ item }}"
-            enabled: no
-            state: stopped
-          loop:
-            - rpcbind
-            - nfs-server
-            - avahi-daemon
-            - cups
+    - name: Setup daily rkhunter scan
+      cron:
+        name: "RKHunter scan"
+        minute: "30"
+        hour: "4"
+        job: "/usr/bin/rkhunter --cronjob --report-warnings-only"
 
-        - name: Set restrictive umask for services
-          lineinfile:
-            path: /etc/systemd/system.conf
-            regexp: '^#UMask='
-            line: 'UMask=0027'
+    # Service Hardening
+    - name: Disable unnecessary services
+      service:
+        name: "{{ item }}"
+        enabled: no
+        state: stopped
+      loop:
+        - rpcbind
+        - nfs-server
+        - avahi-daemon
+        - cups
+      ignore_errors: yes
 
-    # ------------------- Additional Hardening -------------------
-    - name: Configure password policies
+    - name: Set restrictive UMask for systemd
+      lineinfile:
+        path: /etc/systemd/system.conf
+        regexp: '^#?UMask='
+        line: 'UMask=027'
+
+    # Password and Login Policy
+    - name: Configure password policy
       blockinfile:
         path: /etc/login.defs
         block: |
@@ -394,6 +392,7 @@
           SHA_CRYPT_MIN_ROUNDS 640000
         marker: "# {mark} ANSIBLE MANAGED BLOCK - PASSWORD POLICIES"
 
+    # Secure Limits
     - name: Configure secure limits
       copy:
         dest: /etc/security/limits.d/hardening.conf
@@ -402,22 +401,21 @@
           * hard maxlogins 10
           * hard nproc 512
 
-    # ------------------- Network Hardening -------------------
-    - name: Configure host-based firewall
-      block:
-        - name: Install firewalld
-          package:
-            name: firewalld
-            state: present
+    # Network Hardening - Firewalld
+    - name: Install firewalld
+      package:
+        name: firewalld
+        state: present
 
-        - name: Start and enable firewalld
-          service:
-            name: firewalld
-            enabled: yes
-            state: started
+    - name: Enable and start firewalld
+      service:
+        name: firewalld
+        enabled: true
+        state: started
 
-        - name: Configure default firewall zone
-          command: firewall-cmd --set-default-zone=drop --permanent
+    - name: Set default firewall zone to drop
+      command: firewall-cmd --set-default-zone=drop
+      notify: reload firewall
 
   handlers:
     - name: restart sshd
@@ -426,4 +424,11 @@
         state: restarted
 
     - name: reload sysctl
-      command: sysctl --system
+      ansible.builtin.sysctl:
+        name: ''
+        sysctl_file: /etc/sysctl.d/99-hardening.conf
+        reload: yes
+
+    - name: reload firewall
+      command: firewall-cmd --reload
+ 
