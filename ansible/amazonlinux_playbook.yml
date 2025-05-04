@@ -268,191 +268,191 @@
         name: openssh-server
         state: present
 
-    - name: Configure SSH hardening
-      blockinfile:
-        path: "{{ sshd_config_path }}"
-        block: |
-          PermitRootLogin no
-          PasswordAuthentication no
-          Protocol 2
-          Port 22
-          LogLevel VERBOSE
-          X11Forwarding no
-          MaxAuthTries 3
-          MaxSessions 2
-          ClientAliveInterval 300
-          ClientAliveCountMax 2
-          AllowTcpForwarding no
-          AllowAgentForwarding no
-          Compression no
-          PermitEmptyPasswords no
-          PermitUserEnvironment no
-          TCPKeepAlive no
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH HARDENING"
-      notify: restart sshd
+  #   - name: Configure SSH hardening
+  #     blockinfile:
+  #       path: "{{ sshd_config_path }}"
+  #       block: |
+  #         PermitRootLogin no
+  #         PasswordAuthentication no
+  #         Protocol 2
+  #         Port 22
+  #         LogLevel VERBOSE
+  #         X11Forwarding no
+  #         MaxAuthTries 3
+  #         MaxSessions 2
+  #         ClientAliveInterval 300
+  #         ClientAliveCountMax 2
+  #         AllowTcpForwarding no
+  #         AllowAgentForwarding no
+  #         Compression no
+  #         PermitEmptyPasswords no
+  #         PermitUserEnvironment no
+  #         TCPKeepAlive no
+  #       marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH HARDENING"
+  #     notify: restart sshd
 
-    - name: Configure kernel parameters
-      copy:
-        dest: /etc/sysctl.d/99-hardening.conf
-        content: |
-          fs.protected_fifos = 2
-          fs.protected_regular = 2
-          fs.protected_hardlinks = 1
-          fs.protected_symlinks = 1
-          fs.suid_dumpable = 0
-          kernel.kptr_restrict = 2
-          kernel.perf_event_paranoid = 3
-          kernel.yama.ptrace_scope = 1
-          kernel.core_uses_pid = 1
-          kernel.dmesg_restrict = 1
-          kernel.randomize_va_space = 2
-          kernel.unprivileged_bpf_disabled = 1
-          net.ipv4.conf.all.accept_redirects = 0
-          net.ipv4.conf.default.accept_redirects = 0
-          net.ipv4.conf.all.log_martians = 1
-          net.ipv4.conf.default.log_martians = 1
-          net.ipv4.conf.all.rp_filter = 1
-          net.ipv4.conf.default.rp_filter = 1
-          net.ipv4.tcp_syncookies = 1
-          net.ipv6.conf.all.accept_redirects = 0
-          net.ipv6.conf.default.accept_redirects = 0
-      notify: reload sysctl
+  #   - name: Configure kernel parameters
+  #     copy:
+  #       dest: /etc/sysctl.d/99-hardening.conf
+  #       content: |
+  #         fs.protected_fifos = 2
+  #         fs.protected_regular = 2
+  #         fs.protected_hardlinks = 1
+  #         fs.protected_symlinks = 1
+  #         fs.suid_dumpable = 0
+  #         kernel.kptr_restrict = 2
+  #         kernel.perf_event_paranoid = 3
+  #         kernel.yama.ptrace_scope = 1
+  #         kernel.core_uses_pid = 1
+  #         kernel.dmesg_restrict = 1
+  #         kernel.randomize_va_space = 2
+  #         kernel.unprivileged_bpf_disabled = 1
+  #         net.ipv4.conf.all.accept_redirects = 0
+  #         net.ipv4.conf.default.accept_redirects = 0
+  #         net.ipv4.conf.all.log_martians = 1
+  #         net.ipv4.conf.default.log_martians = 1
+  #         net.ipv4.conf.all.rp_filter = 1
+  #         net.ipv4.conf.default.rp_filter = 1
+  #         net.ipv4.tcp_syncookies = 1
+  #         net.ipv6.conf.all.accept_redirects = 0
+  #         net.ipv6.conf.default.accept_redirects = 0
+  #     notify: reload sysctl
 
-    # File Integrity Monitoring with AIDE
-    - name: Ensure AIDE is installed
-      package:
-        name: aide
-        state: present
+  #   # File Integrity Monitoring with AIDE
+  #   - name: Ensure AIDE is installed
+  #     package:
+  #       name: aide
+  #       state: present
 
-    - name: Create AIDE directories if they don't exist
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: "0700"
-      loop:
-        - /var/lib/aide
-        - /var/log/aide
+  #   - name: Create AIDE directories if they don't exist
+  #     file:
+  #       path: "{{ item }}"
+  #       state: directory
+  #       mode: "0700"
+  #     loop:
+  #       - /var/lib/aide
+  #       - /var/log/aide
 
-    - name: Harden AIDE configuration
-      copy:
-        dest: "{{ aide_config_path }}"
-        content: |
-          database=file:/var/lib/aide/aide.db.gz
-          database_out=file:/var/lib/aide/aide.db.new.gz
-          gzip_dbout=yes
-          report_url=file:/var/log/aide/aide.log
-          report_url=stdout
-          log_level=info
-          report_level=info
+  #   - name: Harden AIDE configuration
+  #     copy:
+  #       dest: "{{ aide_config_path }}"
+  #       content: |
+  #         database=file:/var/lib/aide/aide.db.gz
+  #         database_out=file:/var/lib/aide/aide.db.new.gz
+  #         gzip_dbout=yes
+  #         report_url=file:/var/log/aide/aide.log
+  #         report_url=stdout
+  #         log_level=info
+  #         report_level=info
 
-          @@define DBDIR /var/lib/aide
-          @@define LOGDIR /var/log/aide
+  #         @@define DBDIR /var/lib/aide
+  #         @@define LOGDIR /var/log/aide
 
-          # Custom rule definition
-          @@define CUSTOMRULE p+i+n+u+g+s+b+m+c+md5+sha256
+  #         # Custom rule definition
+  #         @@define CUSTOMRULE p+i+n+u+g+s+b+m+c+md5+sha256
 
-          /bin    CUSTOMRULE
-          /sbin   CUSTOMRULE
-          /lib    CUSTOMRULE
-          /lib64  CUSTOMRULE
-          /usr    CUSTOMRULE
-          /etc    CUSTOMRULE
-          /boot   CUSTOMRULE
-          /opt    CUSTOMRULE
-          /root   CUSTOMRULE
-          /var    CUSTOMRULE
-        mode: "0600"
+  #         /bin    CUSTOMRULE
+  #         /sbin   CUSTOMRULE
+  #         /lib    CUSTOMRULE
+  #         /lib64  CUSTOMRULE
+  #         /usr    CUSTOMRULE
+  #         /etc    CUSTOMRULE
+  #         /boot   CUSTOMRULE
+  #         /opt    CUSTOMRULE
+  #         /root   CUSTOMRULE
+  #         /var    CUSTOMRULE
+  #       mode: "0600"
 
-    - name: Initialize AIDE database
-      command: /usr/sbin/aide --init --config={{ aide_config_path }}
-      register: aide_init
-      changed_when: "'AIDE database initialized' in aide_init.stdout"
+  #   - name: Initialize AIDE database
+  #     command: /usr/sbin/aide --init --config={{ aide_config_path }}
+  #     register: aide_init
+  #     changed_when: "'AIDE database initialized' in aide_init.stdout"
 
-    - name: Install AIDE database
-      command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
-      when: "'AIDE database initialized' in aide_init.stdout"
-      args:
-        creates: /var/lib/aide/aide.db.gz
+  #   - name: Install AIDE database
+  #     command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+  #     when: "'AIDE database initialized' in aide_init.stdout"
+  #     args:
+  #       creates: /var/lib/aide/aide.db.gz
 
-    - name: Install rkhunter
-      package:
-        name: rkhunter
-        state: present
+  #   - name: Install rkhunter
+  #     package:
+  #       name: rkhunter
+  #       state: present
 
-    - name: Update rkhunter database
-      command: rkhunter --update
+  #   - name: Update rkhunter database
+  #     command: rkhunter --update
 
-    - name: Setup daily rkhunter scan
-      cron:
-        name: "RKHunter scan"
-        minute: "30"
-        hour: "4"
-        job: "/usr/bin/rkhunter --cronjob --report-warnings-only"
+  #   - name: Setup daily rkhunter scan
+  #     cron:
+  #       name: "RKHunter scan"
+  #       minute: "30"
+  #       hour: "4"
+  #       job: "/usr/bin/rkhunter --cronjob --report-warnings-only"
 
-    - name: Disable unnecessary services
-      service:
-        name: "{{ item }}"
-        enabled: no
-        state: stopped
-      loop:
-        - rpcbind
-        - nfs-server
-        - avahi-daemon
-        - cups
-      ignore_errors: yes
+  #   - name: Disable unnecessary services
+  #     service:
+  #       name: "{{ item }}"
+  #       enabled: no
+  #       state: stopped
+  #     loop:
+  #       - rpcbind
+  #       - nfs-server
+  #       - avahi-daemon
+  #       - cups
+  #     ignore_errors: yes
 
-    - name: Set restrictive UMask for systemd
-      lineinfile:
-        path: /etc/systemd/system.conf
-        regexp: '^#?UMask='
-        line: 'UMask=027'
-      notify: reload systemd
+  #   - name: Set restrictive UMask for systemd
+  #     lineinfile:
+  #       path: /etc/systemd/system.conf
+  #       regexp: '^#?UMask='
+  #       line: 'UMask=027'
+  #     notify: reload systemd
 
-    - name: Configure password policy
-      blockinfile:
-        path: /etc/login.defs
-        block: |
-          PASS_MAX_DAYS 90
-          PASS_MIN_DAYS 7
-          PASS_WARN_AGE 14
-          UMASK 027
-          SHA_CRYPT_MIN_ROUNDS 640000
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - PASSWORD POLICIES"
+  #   - name: Configure password policy
+  #     blockinfile:
+  #       path: /etc/login.defs
+  #       block: |
+  #         PASS_MAX_DAYS 90
+  #         PASS_MIN_DAYS 7
+  #         PASS_WARN_AGE 14
+  #         UMASK 027
+  #         SHA_CRYPT_MIN_ROUNDS 640000
+  #       marker: "# {mark} ANSIBLE MANAGED BLOCK - PASSWORD POLICIES"
 
-    - name: Configure secure limits
-      copy:
-        dest: /etc/security/limits.d/hardening.conf
-        content: |
-          * hard core 0
-          * hard maxlogins 10
-          * hard nproc 512
+  #   - name: Configure secure limits
+  #     copy:
+  #       dest: /etc/security/limits.d/hardening.conf
+  #       content: |
+  #         * hard core 0
+  #         * hard maxlogins 10
+  #         * hard nproc 512
 
-    - name: Install firewalld
-      package:
-        name: firewalld
-        state: present
+  #   - name: Install firewalld
+  #     package:
+  #       name: firewalld
+  #       state: present
 
-    - name: Enable and start firewalld
-      service:
-        name: firewalld
-        enabled: true
-        state: started
+  #   - name: Enable and start firewalld
+  #     service:
+  #       name: firewalld
+  #       enabled: true
+  #       state: started
 
-    - name: Set default firewall zone to drop
-      command: firewall-cmd --set-default-zone=drop
-      notify: reload firewall
+  #   - name: Set default firewall zone to drop
+  #     command: firewall-cmd --set-default-zone=drop
+  #     notify: reload firewall
 
-  handlers:
-    - name: restart sshd
-      service:
-        name: sshd
-        state: restarted
+  # handlers:
+  #   - name: restart sshd
+  #     service:
+  #       name: sshd
+  #       state: restarted
 
-    - name: reload sysctl
-      command: sysctl --system
+  #   - name: reload sysctl
+  #     command: sysctl --system
 
-    - name: reload firewall
-      command: firewall-cmd --reload
+  #   - name: reload firewall
+  #     command: firewall-cmd --reload
 
-    - name: reload systemd
-      command: systemctl daemon-reload
+  #   - name: reload systemd
+  #     command: systemctl daemon-reload
