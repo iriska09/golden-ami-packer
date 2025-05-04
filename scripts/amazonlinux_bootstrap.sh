@@ -217,7 +217,12 @@ echo "[6/10] Service Hardening..."
 # Disable unnecessary services
 echo "  - Disabling unnecessary services..."
 systemctl disable rpcbind
-systemctl disable nfs
+if systemctl list-units --type=service | grep -q 'nfs.service'; then
+    sudo systemctl disable nfs.service
+else
+    echo "nfs.service not found, skipping."
+fi
+
 systemctl disable atd
 systemctl disable avahi-daemon
 systemctl disable cups
