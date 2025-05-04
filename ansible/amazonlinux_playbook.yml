@@ -259,7 +259,7 @@
   hosts: all
   become: true
   vars:
-    cis_level: "1"  # Change to "2" for Level 2 hardening
+    cis_level: "1"
     enable_soc_compliance: true
     min_password_length: 14
     password_max_days: 90
@@ -281,16 +281,24 @@
         - prelink
         - vsftpd
 
-    - name: Install security tools
+    - name: Install base security tools
       ansible.builtin.package:
         name:
           - aide
           - rsyslog
-          - audit-libs  # Correct package name for AL2023
           - scap-security-guide
           - fail2ban
-          - audit  # This is now available after installing audit-libs
         state: present
+
+    # Amazon Linux 2023 uses different audit package structure
+    - name: Install audit framework
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - audit
+        - audispd-plugins
+        - libaudit
 
     - name: Ensure GPG checking is enabled
       ansible.builtin.lineinfile:
@@ -386,7 +394,7 @@
         - { key: "Banner", value: "/etc/issue.net" }
         - { key: "UsePAM", value: "yes" }
         - { key: "AllowTcpForwarding", value: "no" }
-        - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }  # Simplified for AL2023
+        - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
         - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
         - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
       notify: restart sshd
@@ -428,15 +436,6 @@
         - { key: "kernel.randomize_va_space", value: "2" }
 
     # ========== Logging and Auditing ==========
-    - name: Install audit packages
-      ansible.builtin.package:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - audit-libs
-        - audit
-        - audispd-plugins
-
     - name: Enable auditd service
       ansible.builtin.service:
         name: auditd
@@ -445,12 +444,31 @@
 
     - name: Configure audit rules (SOC compliance)
       ansible.builtin.copy:
-        dest: /etc/audit/rules.d/99-finalize.rules
+        dest: /etc/audit/rules.d/10-base-config.rules
         content: |
+          ## Remove existing rules
+          -D
+
           ## Buffer size
           -b 8192
 
-          ## Make the configuration immutable
+          ## Monitor system time changes
+          -a always,exit -F arch=b64 -S adjtimex,settimeofday -F key=time-change
+          -a always,exit -F arch=b32 -S adjtimex,settimeofday,stime -F key=time-change
+          -a always,exit -F arch=b64 -S clock_settime -F key=time-change
+          -w /etc/localtime -p wa -k time-change
+
+          ## Monitor account changes
+          -w /etc/group -p wa -k identity
+          -w /etc/passwd -p wa -k identity
+          -w /etc/gshadow -p wa -k identity
+          -w /etc/shadow -p wa -k identity
+          -w /etc/security/opasswd -p wa -k identity
+
+          ## Monitor privilege escalation
+          -a always,exit -F arch=b64 -S setuid,setgid -F key=privileged
+
+          ## Make configuration immutable
           -e 2
         mode: '0600'
 
@@ -523,78 +541,6 @@
         dest: /etc/issue.net
         content: |
           Unauthorized access prohibited. All activity may be monitored and reported.
-
-    # ========== CIS Level 2 Hardening (Conditional) ==========
-    - name: Additional CIS Level 2 hardening
-      when: cis_level == "2"
-      block:
-        - name: Enable SELinux in enforcing mode
-          ansible.builtin.lineinfile:
-            path: /etc/selinux/config
-            regexp: '^SELINUX='
-            line: 'SELINUX=enforcing'
-
-        - name: Set SELinux policy
-          ansible.builtin.lineinfile:
-            path: /etc/selinux/config
-            regexp: '^SELINUXTYPE='
-            line: 'SELINUXTYPE=targeted'
-
-        - name: Install and enable firewalld
-          ansible.builtin.package:
-            name: firewalld
-            state: present
-
-        - name: Start and enable firewalld
-          ansible.builtin.service:
-            name: firewalld
-            state: started
-            enabled: yes
-
-        - name: Configure default firewalld zone
-          ansible.builtin.command: firewall-cmd --set-default-zone=drop
-
-      tags: cis_level2
-
-    # ========== SOC Compliance (Conditional) ==========
-    - name: Additional SOC compliance settings
-      when: enable_soc_compliance
-      block:
-        - name: Enable session timeout for shell
-          ansible.builtin.lineinfile:
-            path: /etc/profile.d/session_timeout.sh
-            line: 'TMOUT=900'
-            create: yes
-            mode: '0644'
-
-        - name: Enable command history with timestamps
-          ansible.builtin.lineinfile:
-            path: /etc/profile.d/history.sh
-            line: 'export HISTTIMEFORMAT="%F %T "'
-            create: yes
-            mode: '0644'
-
-        - name: Increase history size
-          ansible.builtin.lineinfile:
-            path: /etc/profile.d/history.sh
-            line: 'export HISTSIZE=5000'
-            insertafter: '^export HISTTIMEFORMAT='
-
-        - name: Configure logrotate for audit logs
-          ansible.builtin.copy:
-            dest: /etc/logrotate.d/audit
-            content: |
-              /var/log/audit/*.log {
-                  weekly
-                  missingok
-                  rotate 52
-                  compress
-                  delaycompress
-                  notifempty
-                  create 0600 root root
-              }
-
-      tags: soc_compliance
 
   handlers:
     - name: restart sshd
