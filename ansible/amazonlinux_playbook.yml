@@ -1,702 +1,702 @@
 
-- name: CIS Level 1 Hardening - Amazon Linux 2023
-  hosts: all
-  become: true
+# - name: CIS Level 1 Hardening - Amazon Linux 2023
+#   hosts: all
+#   become: true
 
-  vars:
-    sshd_config_path: /etc/ssh/sshd_config
+#   vars:
+#     sshd_config_path: /etc/ssh/sshd_config
 
-  tasks:
+#   tasks:
 
-    # ------------------- SSH Installation and Setup -------------------
-    - name: Check if OpenSSH server is installed
-      stat:
-        path: /usr/sbin/sshd
-      register: sshd_installed
-
-    - name: Install OpenSSH server if not present
-      package:
-        name: openssh-server
-        state: present
-      when: not sshd_installed.stat.exists
-
-#     - name: Verify SSH service name
-#       shell: systemctl list-unit-files | grep -E "^sshd.*service" || true
-#       register: ssh_service_check
-#       changed_when: false
-
-#     - name: Set correct SSH service name fact
-#       set_fact:
-#         ssh_service_name: "{{ 'sshd' if 'sshd.service' in ssh_service_check.stdout else 'ssh' }}"
-
-#     - name: Ensure SSH service is enabled and running
-#       systemd:
-#         name: "{{ ssh_service_name }}"
-#         enabled: yes
-#         state: started
-
-#     # ------------------- SSH Configuration -------------------
-#     - name: Configure SSH settings
-#       block:
-#         - name: Disable root login via SSH
-#           lineinfile:
-#             path: "{{ sshd_config_path }}"
-#             regexp: '^PermitRootLogin'
-#             line: 'PermitRootLogin no'
-#             backup: yes
-#         - name: Disable password authentication
-#           lineinfile:
-#             path: "{{ sshd_config_path }}"
-#             regexp: '^PasswordAuthentication'
-#             line: 'PasswordAuthentication no'
-#             backup: yes
-#         - name: Set SSH protocol to 2
-#           lineinfile:
-#             path: "{{ sshd_config_path }}"
-#             regexp: '^Protocol'
-#             line: 'Protocol 2'
-#             backup: yes
-#         - name: Explicitly set SSH Port 22
-#           lineinfile:
-#             path: "{{ sshd_config_path }}"
-#             regexp: '^Port'
-#             line: 'Port 22'
-#             backup: yes
-#         - name: Restart SSH service to apply changes
-#           service:
-#             name: "{{ ssh_service_name }}"
-#             state: restarted
-
-#     # ------------------- Password Policies -------------------
-#     - name: Set password max days to 90
-#       lineinfile:
-#         path: /etc/login.defs
-#         regexp: '^PASS_MAX_DAYS'
-#         line: 'PASS_MAX_DAYS 90'
-
-#     - name: Set password min days to 7
-#       lineinfile:
-#         path: /etc/login.defs
-#         regexp: '^PASS_MIN_DAYS'
-#         line: 'PASS_MIN_DAYS 7'
-
-#     - name: Set warning age for password expiration
-#       lineinfile:
-#         path: /etc/login.defs
-#         regexp: '^PASS_WARN_AGE'
-#         line: 'PASS_WARN_AGE 14'
-
-#     - name: Check if pwquality.conf exists
+#     # ------------------- SSH Installation and Setup -------------------
+#     - name: Check if OpenSSH server is installed
 #       stat:
-#         path: /etc/security/pwquality.conf
-#       register: pwquality_conf
+#         path: /usr/sbin/sshd
+#       register: sshd_installed
 
-#     - name: Set minimum password length to 14
-#       lineinfile:
-#         path: /etc/security/pwquality.conf
-#         regexp: '^minlen'
-#         line: 'minlen = 14'
-#       when: pwquality_conf.stat.exists
-
-#     - name: Set password hashing rounds
-#       lineinfile:
-#         path: /etc/login.defs
-#         regexp: '^SHA_CRYPT_MIN_ROUNDS'
-#         line: 'SHA_CRYPT_MIN_ROUNDS 640000'
-
-#     # ------------------- Kernel Hardening -------------------
-#     - name: Configure kernel parameters (persisted)
-#       copy:
-#         dest: /etc/sysctl.d/cis-hardening.conf
-#         content: |
-#           fs.protected_fifos = 2
-#           fs.protected_regular = 2
-#           kernel.kptr_restrict = 2
-#           kernel.perf_event_paranoid = 3
-#           kernel.sysrq = 0
-#           kernel.yama.ptrace_scope = 1
-#           net.core.bpf_jit_harden = 2
-#           net.ipv4.conf.all.accept_redirects = 0
-#           net.ipv4.conf.all.log_martians = 1
-#           net.ipv4.conf.all.rp_filter = 1
-#           net.ipv4.conf.all.send_redirects = 0
-#           net.ipv4.conf.default.accept_redirects = 0
-#           net.ipv4.conf.default.log_martians = 1
-#           net.ipv6.conf.all.accept_redirects = 0
-#           net.ipv6.conf.default.accept_redirects = 0
-#       notify: reload sysctl
-
-#     # ------------------- audit ad logging -------------------
-#     - name: Ensure auditd is installed
+#     - name: Install OpenSSH server if not present
 #       package:
-#         name: auditd
+#         name: openssh-server
 #         state: present
+#       when: not sshd_installed.stat.exists
 
-#     - name: Enable and start auditd
-#       service:
-#         name: auditd
-#         enabled: true
-#         state: started
+# #     - name: Verify SSH service name
+# #       shell: systemctl list-unit-files | grep -E "^sshd.*service" || true
+# #       register: ssh_service_check
+# #       changed_when: false
 
-#     - name: Set audit rules file permissions
-#       file:
-#         path: /etc/audit/audit.rules
-#         mode: '0640'
+# #     - name: Set correct SSH service name fact
+# #       set_fact:
+# #         ssh_service_name: "{{ 'sshd' if 'sshd.service' in ssh_service_check.stdout else 'ssh' }}"
 
-#     - name: Set audit config file permissions
-#       file:
-#         path: /etc/audit/auditd.conf
-#         mode: '0640'
+# #     - name: Ensure SSH service is enabled and running
+# #       systemd:
+# #         name: "{{ ssh_service_name }}"
+# #         enabled: yes
+# #         state: started
 
-#     - name: Configure remote logging
-#       lineinfile:
-#         path: /etc/rsyslog.conf
-#         line: '*.* @loghost.example.com'
-#       notify: restart rsyslog
+# #     # ------------------- SSH Configuration -------------------
+# #     - name: Configure SSH settings
+# #       block:
+# #         - name: Disable root login via SSH
+# #           lineinfile:
+# #             path: "{{ sshd_config_path }}"
+# #             regexp: '^PermitRootLogin'
+# #             line: 'PermitRootLogin no'
+# #             backup: yes
+# #         - name: Disable password authentication
+# #           lineinfile:
+# #             path: "{{ sshd_config_path }}"
+# #             regexp: '^PasswordAuthentication'
+# #             line: 'PasswordAuthentication no'
+# #             backup: yes
+# #         - name: Set SSH protocol to 2
+# #           lineinfile:
+# #             path: "{{ sshd_config_path }}"
+# #             regexp: '^Protocol'
+# #             line: 'Protocol 2'
+# #             backup: yes
+# #         - name: Explicitly set SSH Port 22
+# #           lineinfile:
+# #             path: "{{ sshd_config_path }}"
+# #             regexp: '^Port'
+# #             line: 'Port 22'
+# #             backup: yes
+# #         - name: Restart SSH service to apply changes
+# #           service:
+# #             name: "{{ ssh_service_name }}"
+# #             state: restarted
+
+# #     # ------------------- Password Policies -------------------
+# #     - name: Set password max days to 90
+# #       lineinfile:
+# #         path: /etc/login.defs
+# #         regexp: '^PASS_MAX_DAYS'
+# #         line: 'PASS_MAX_DAYS 90'
+
+# #     - name: Set password min days to 7
+# #       lineinfile:
+# #         path: /etc/login.defs
+# #         regexp: '^PASS_MIN_DAYS'
+# #         line: 'PASS_MIN_DAYS 7'
+
+# #     - name: Set warning age for password expiration
+# #       lineinfile:
+# #         path: /etc/login.defs
+# #         regexp: '^PASS_WARN_AGE'
+# #         line: 'PASS_WARN_AGE 14'
+
+# #     - name: Check if pwquality.conf exists
+# #       stat:
+# #         path: /etc/security/pwquality.conf
+# #       register: pwquality_conf
+
+# #     - name: Set minimum password length to 14
+# #       lineinfile:
+# #         path: /etc/security/pwquality.conf
+# #         regexp: '^minlen'
+# #         line: 'minlen = 14'
+# #       when: pwquality_conf.stat.exists
+
+# #     - name: Set password hashing rounds
+# #       lineinfile:
+# #         path: /etc/login.defs
+# #         regexp: '^SHA_CRYPT_MIN_ROUNDS'
+# #         line: 'SHA_CRYPT_MIN_ROUNDS 640000'
+
+# #     # ------------------- Kernel Hardening -------------------
+# #     - name: Configure kernel parameters (persisted)
+# #       copy:
+# #         dest: /etc/sysctl.d/cis-hardening.conf
+# #         content: |
+# #           fs.protected_fifos = 2
+# #           fs.protected_regular = 2
+# #           kernel.kptr_restrict = 2
+# #           kernel.perf_event_paranoid = 3
+# #           kernel.sysrq = 0
+# #           kernel.yama.ptrace_scope = 1
+# #           net.core.bpf_jit_harden = 2
+# #           net.ipv4.conf.all.accept_redirects = 0
+# #           net.ipv4.conf.all.log_martians = 1
+# #           net.ipv4.conf.all.rp_filter = 1
+# #           net.ipv4.conf.all.send_redirects = 0
+# #           net.ipv4.conf.default.accept_redirects = 0
+# #           net.ipv4.conf.default.log_martians = 1
+# #           net.ipv6.conf.all.accept_redirects = 0
+# #           net.ipv6.conf.default.accept_redirects = 0
+# #       notify: reload sysctl
+
+# #     # ------------------- audit ad logging -------------------
+# #     - name: Ensure auditd is installed
+# #       package:
+# #         name: auditd
+# #         state: present
+
+# #     - name: Enable and start auditd
+# #       service:
+# #         name: auditd
+# #         enabled: true
+# #         state: started
+
+# #     - name: Set audit rules file permissions
+# #       file:
+# #         path: /etc/audit/audit.rules
+# #         mode: '0640'
+
+# #     - name: Set audit config file permissions
+# #       file:
+# #         path: /etc/audit/auditd.conf
+# #         mode: '0640'
+
+# #     - name: Configure remote logging
+# #       lineinfile:
+# #         path: /etc/rsyslog.conf
+# #         line: '*.* @loghost.example.com'
+# #       notify: restart rsyslog
 
 
-#     # ------------------- Unused Services -------------------
-#     - name: Remove unnecessary packages
+# #     # ------------------- Unused Services -------------------
+# #     - name: Remove unnecessary packages
+# #       package:
+# #         name: "{{ item }}"
+# #         state: absent
+# #       loop:
+# #         - telnet
+# #         - rsh
+# #         - talk
+# #         - xinetd
+
+# #     - name: Disable USB storage persistently
+# #       copy:
+# #         dest: /etc/modprobe.d/disable-usb.conf
+# #         content: "blacklist usb-storage"
+
+# #     - name: Disable firewire persistently
+# #       copy:
+# #         dest: /etc/modprobe.d/disable-firewire.conf
+# #         content: "blacklist firewire-ohci"
+
+# #     # ------------------- File Permissions -------------------
+# #     - name: Set permissions for /etc/passwd
+# #       file:
+# #         path: /etc/passwd
+# #         owner: root
+# #         group: root
+# #         mode: '0644'
+
+# #     - name: Set permissions for /etc/shadow
+# #       file:
+# #         path: /etc/shadow
+# #         owner: root
+# #         group: root
+# #         mode: '0000'
+
+# #     - name: Set permissions for /etc/group
+# #       file:
+# #         path: /etc/group
+# #         owner: root
+# #         group: root
+# #         mode: '0644'
+
+# #     - name: Set strict umask in login.defs
+# #       lineinfile:
+# #         path: /etc/login.defs
+# #         regexp: '^UMASK'
+# #         line: 'UMASK 027'
+
+# #     # ------------------- Security Tools -------------------
+# #     - name: Install rkhunter
+# #       package:
+# #         name: rkhunter
+# #         state: present
+
+# #     - name: Install AIDE
+# #       package:
+# #         name: aide
+# #         state: present
+
+
+
+
+# #     - name: Install fail2ban
+# #       package:
+# #         name: fail2ban
+# #         state: present
+
+# #     # ------------------- Legal Banners -------------------
+# #     - name: Set /etc/issue banner
+# #       copy:
+# #         dest: /etc/issue
+# #         content: |
+# #           WARNING: Unauthorized access to this system is forbidden and will be
+# #           prosecuted by law. By accessing this system, you agree that your actions
+# #           may be monitored if unauthorized usage is suspected.
+# #         owner: root
+# #         group: root
+# #         mode: '0644'
+
+# #     - name: Set /etc/issue.net banner
+# #       copy:
+# #         dest: /etc/issue.net
+# #         content: |
+# #           WARNING: Unauthorized access to this system is forbidden and will be
+# #           prosecuted by law. By accessing this system, you agree that your actions
+# #           may be monitored if unauthorized usage is suspected.
+# #         owner: root
+# #         group: root
+# #         mode: '0644'
+
+# #   handlers:
+# #     - name: restart rsyslog
+# #       service:
+# #         name: rsyslog
+# #         state: restarted
+
+# #     - name: reload sysctl
+# #       command: sysctl --system
+# ---
+# - name: Comprehensive System Hardening Playbook
+#   hosts: all
+#   become: yes
+#   vars:
+#     ssh_port: 2222
+#     ssh_timeout: 300
+#     hardening_banner: |
+#       ********************************************************************
+#       *                                                                  *
+#       * This system is for the use of authorized users only.             *
+#       * Individuals using this computer system without authority, or in  *
+#       * excess of their authority, are subject to having all of their    *
+#       * activities on this system monitored and recorded by system       *
+#       * personnel.                                                       *
+#       *                                                                  *
+#       * In the course of monitoring individuals improperly using this     *
+#       * system, or in the course of system maintenance, the activities   *
+#       * of authorized users may also be monitored.                       *
+#       *                                                                  *
+#       * Anyone using this system expressly consents to such monitoring   *
+#       * and is advised that if such monitoring reveals possible          *
+#       * evidence of criminal activity, system personnel may provide the  *
+#       * evidence of such monitoring to law enforcement officials.        *
+#       *                                                                  *
+#       ********************************************************************
+
+#   tasks:
+#     # Section 1: Initial Setup
+#     - name: Install required packages
+#       tags: packages
 #       package:
 #         name: "{{ item }}"
-#         state: absent
+#         state: present
 #       loop:
-#         - telnet
-#         - rsh
-#         - talk
-#         - xinetd
+#         - aide
+#         - fail2ban
+#         - rkhunter
+#         - clamav
+#         - policycoreutils-python-utils
 
-#     - name: Disable USB storage persistently
-#       copy:
-#         dest: /etc/modprobe.d/disable-usb.conf
-#         content: "blacklist usb-storage"
+#     # Section 2: Filesystem Hardening
+#     - name: Configure separate partitions (placeholder - adjust for your environment)
+#       tags: filesystem
+#       block:
+#         - name: Ensure /home partition exists
+#           mount:
+#             path: /home
+#             src: /dev/xvdf1
+#             fstype: ext4
+#             state: present
+#             opts: defaults
+        
+#         - name: Ensure /var partition exists
+#           mount:
+#             path: /var
+#             src: /dev/xvdg1
+#             fstype: ext4
+#             state: present
+#             opts: defaults
+#       when: false  # Set to true and adjust devices if using separate partitions
 
-#     - name: Disable firewire persistently
-#       copy:
-#         dest: /etc/modprobe.d/disable-firewire.conf
-#         content: "blacklist firewire-ohci"
-
-#     # ------------------- File Permissions -------------------
-#     - name: Set permissions for /etc/passwd
+#     - name: Set secure mount options
+#       tags: filesystem
+#       lineinfile:
+#         path: /etc/fstab
+#         backrefs: yes
+#         regexp: '^(.*\s/\s+\w+\s+)defaults(\s+.*)$'
+#         line: '\1defaults,nodev,nosuid,noexec\2'
+    
+#     - name: Set sticky bit for temp directories
+#       tags: filesystem
 #       file:
-#         path: /etc/passwd
-#         owner: root
-#         group: root
-#         mode: '0644'
+#         path: "{{ item }}"
+#         mode: a+t
+#       loop:
+#         - /tmp
+#         - /var/tmp
 
-#     - name: Set permissions for /etc/shadow
-#       file:
-#         path: /etc/shadow
-#         owner: root
-#         group: root
-#         mode: '0000'
-
-#     - name: Set permissions for /etc/group
-#       file:
-#         path: /etc/group
-#         owner: root
-#         group: root
-#         mode: '0644'
-
-#     - name: Set strict umask in login.defs
+#     # Section 3: Account and Authentication
+#     - name: Configure password policies
+#       tags: authentication
 #       lineinfile:
 #         path: /etc/login.defs
-#         regexp: '^UMASK'
-#         line: 'UMASK 027'
+#         regexp: "^{{ item.key }}"
+#         line: "{{ item.key }} {{ item.value }}"
+#       with_items:
+#         - { key: "PASS_MAX_DAYS", value: "90" }
+#         - { key: "PASS_MIN_DAYS", value: "7" }
+#         - { key: "PASS_WARN_AGE", value: "7" }
+#         - { key: "UMASK", value: "027" }
 
-#     # ------------------- Security Tools -------------------
-#     - name: Install rkhunter
-#       package:
-#         name: rkhunter
-#         state: present
+#     - name: Configure password complexity
+#       tags: authentication
+#       lineinfile:
+#         path: /etc/pam.d/system-auth
+#         line: "password requisite pam_pwquality.so try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
+#         insertafter: '^#%PAM-1.0'
 
-#     - name: Install AIDE
-#       package:
-#         name: aide
-#         state: present
+#     - name: Configure account lockout
+#       tags: authentication
+#       blockinfile:
+#         path: /etc/pam.d/system-auth
+#         block: |
+#           auth required pam_faillock.so preauth silent audit deny=5 unlock_time=900
+#           auth [success=1 default=bad] pam_unix.so
+#           auth [default=die] pam_faillock.so authfail audit deny=5 unlock_time=900
 
+#     # Section 4: SSH Hardening
+#     - name: Configure SSH hardening
+#       tags: ssh
+#       lineinfile:
+#         path: /etc/ssh/sshd_config
+#         regexp: "^{{ item.key }}"
+#         line: "{{ item.key }} {{ item.value }}"
+#         validate: '/usr/sbin/sshd -T -f %s'
+#       with_items:
+#         - { key: "Protocol", value: "2" }
+#         - { key: "LogLevel", value: "VERBOSE" }
+#         - { key: "X11Forwarding", value: "no" }
+#         - { key: "MaxAuthTries", value: "3" }
+#         - { key: "MaxSessions", value: "2" }
+#         - { key: "IgnoreRhosts", value: "yes" }
+#         - { key: "HostbasedAuthentication", value: "no" }
+#         - { key: "PermitRootLogin", value: "no" }
+#         - { key: "PermitEmptyPasswords", value: "no" }
+#         - { key: "PermitUserEnvironment", value: "no" }
+#         - { key: "ClientAliveInterval", value: "{{ ssh_timeout }}" }
+#         - { key: "ClientAliveCountMax", value: "0" }
+#         - { key: "LoginGraceTime", value: "60" }
+#         - { key: "Banner", value: "/etc/issue.net" }
+#         - { key: "UsePAM", value: "yes" }
+#         - { key: "AllowTcpForwarding", value: "no" }
+#         - { key: "AllowAgentForwarding", value: "no" }
+#         - { key: "TCPKeepAlive", value: "no" }
+#         - { key: "Compression", value: "no" }
+#         - { key: "Port", value: "{{ ssh_port }}" }
+#         - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
+#         - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
+#         - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
 
-
-
-#     - name: Install fail2ban
-#       package:
-#         name: fail2ban
-#         state: present
-
-#     # ------------------- Legal Banners -------------------
-#     - name: Set /etc/issue banner
+#     - name: Create legal banners
+#       tags: ssh
 #       copy:
-#         dest: /etc/issue
-#         content: |
-#           WARNING: Unauthorized access to this system is forbidden and will be
-#           prosecuted by law. By accessing this system, you agree that your actions
-#           may be monitored if unauthorized usage is suspected.
-#         owner: root
-#         group: root
-#         mode: '0644'
+#         dest: "{{ item }}"
+#         content: "{{ hardening_banner }}"
+#       loop:
+#         - /etc/issue
+#         - /etc/issue.net
 
-#     - name: Set /etc/issue.net banner
+#     # Section 5: Network Hardening
+#     - name: Configure sysctl parameters
+#       tags: network
+#       sysctl:
+#         name: "{{ item.key }}"
+#         value: "{{ item.value }}"
+#         state: present
+#         sysctl_set: yes
+#         reload: yes
+#       with_items:
+#         - { key: "kernel.kptr_restrict", value: "2" }
+#         - { key: "kernel.dmesg_restrict", value: "1" }
+#         - { key: "kernel.perf_event_paranoid", value: "3" }
+#         - { key: "kernel.yama.ptrace_scope", value: "2" }
+#         - { key: "kernel.core_uses_pid", value: "1" }
+#         - { key: "kernel.sysrq", value: "0" }
+#         - { key: "fs.protected_fifos", value: "2" }
+#         - { key: "fs.protected_regular", value: "2" }
+#         - { key: "fs.protected_hardlinks", value: "1" }
+#         - { key: "fs.protected_symlinks", value: "1" }
+#         - { key: "fs.suid_dumpable", value: "0" }
+#         - { key: "net.ipv4.conf.all.accept_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.default.accept_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.all.send_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.default.send_redirects", value: "0" }
+#         - { key: "net.ipv4.conf.all.rp_filter", value: "1" }
+#         - { key: "net.ipv4.conf.default.rp_filter", value: "1" }
+#         - { key: "net.ipv4.tcp_syncookies", value: "1" }
+#         - { key: "net.ipv4.tcp_timestamps", value: "0" }
+#         - { key: "net.ipv6.conf.all.accept_redirects", value: "0" }
+#         - { key: "net.ipv6.conf.default.accept_redirects", value: "0" }
+#         - { key: "net.ipv6.conf.all.disable_ipv6", value: "1" }
+#         - { key: "net.ipv6.conf.default.disable_ipv6", value: "1" }
+#         - { key: "net.core.bpf_jit_harden", value: "2" }
+
+#     - name: Configure firewall
+#       tags: network
+#       block:
+#         - name: Ensure firewalld is running
+#           service:
+#             name: firewalld
+#             state: started
+#             enabled: yes
+        
+#         - name: Create hardened zone
+#           firewalld:
+#             zone: hardened
+#             state: present
+#             target: DROP
+#             permanent: yes
+        
+#         - name: Add services to zone
+#           firewalld:
+#             zone: hardened
+#             service: "{{ item }}"
+#             permanent: yes
+#             state: enabled
+#           loop:
+#             - ssh
+        
+#         - name: Add custom SSH port
+#           firewalld:
+#             zone: hardened
+#             port: "{{ ssh_port }}/tcp"
+#             permanent: yes
+#             state: enabled
+        
+#         - name: Set default zone
+#           firewalld:
+#             zone: hardened
+#             interface: eth0
+#             permanent: yes
+#             state: enabled
+        
+#         - name: Reload firewall
+#           command: firewall-cmd --reload
+
+#     # Section 6: Service Hardening
+#     - name: Disable unnecessary services
+#       tags: services
+#       service:
+#         name: "{{ item }}"
+#         state: stopped
+#         enabled: no
+#       loop:
+#         - rpcbind
+#         - nfs
+#         - atd
+#         - avahi-daemon
+#         - cups
+#         - dhcpd
+#         - slapd
+#         - named
+#         - vsftpd
+#         - telnet.socket
+
+#     # Section 7: Logging and Auditing
+#     - name: Configure audit rules
+#       tags: logging
 #       copy:
-#         dest: /etc/issue.net
+#         dest: /etc/audit/rules.d/hardening.rules
 #         content: |
-#           WARNING: Unauthorized access to this system is forbidden and will be
-#           prosecuted by law. By accessing this system, you agree that your actions
-#           may be monitored if unauthorized usage is suspected.
-#         owner: root
-#         group: root
-#         mode: '0644'
+#           # Audit system events
+#           -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
+#           -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
+#           -a always,exit -F arch=b64 -S clock_settime -k time-change
+#           -a always,exit -F arch=b32 -S clock_settime -k time-change
+#           -w /etc/localtime -p wa -k time-change
 
-#   handlers:
-#     - name: restart rsyslog
+#           # Audit user/group changes
+#           -w /etc/group -p wa -k identity
+#           -w /etc/passwd -p wa -k identity
+#           -w /etc/gshadow -p wa -k identity
+#           -w /etc/shadow -p wa -k identity
+#           -w /etc/security/opasswd -p wa -k identity
+
+#           # Audit system network configuration
+#           -w /etc/hosts -p wa -k network-modifications
+#           -w /etc/sysconfig/network -p wa -k network-modifications
+#           -w /etc/sysconfig/network-scripts/ -p wa -k network-modifications
+
+#           # Audit privileged commands
+#           -a always,exit -F path=/usr/sbin/setfiles -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged
+
+#     - name: Restart auditd
+#       tags: logging
+#       service:
+#         name: auditd
+#         state: restarted
+
+#     - name: Configure rsyslog
+#       tags: logging
+#       copy:
+#         dest: /etc/rsyslog.d/90-hardening.conf
+#         content: |
+#           *.emerg :omusrmsg:*
+#           auth.* /var/log/auth.log
+#           authpriv.* /var/log/secure
+#           mail.* /var/log/mail.log
+#           cron.* /var/log/cron.log
+#           *.=warning;*.=err /var/log/warn.log
+#           *.crit /var/log/warn.log
+#           *.*;mail.none;authpriv.none;cron.none /var/log/messages
+
+#     - name: Restart rsyslog
+#       tags: logging
 #       service:
 #         name: rsyslog
 #         state: restarted
 
-#     - name: reload sysctl
-#       command: sysctl --system
----
-- name: Comprehensive System Hardening Playbook
-  hosts: all
-  become: yes
-  vars:
-    ssh_port: 2222
-    ssh_timeout: 300
-    hardening_banner: |
-      ********************************************************************
-      *                                                                  *
-      * This system is for the use of authorized users only.             *
-      * Individuals using this computer system without authority, or in  *
-      * excess of their authority, are subject to having all of their    *
-      * activities on this system monitored and recorded by system       *
-      * personnel.                                                       *
-      *                                                                  *
-      * In the course of monitoring individuals improperly using this     *
-      * system, or in the course of system maintenance, the activities   *
-      * of authorized users may also be monitored.                       *
-      *                                                                  *
-      * Anyone using this system expressly consents to such monitoring   *
-      * and is advised that if such monitoring reveals possible          *
-      * evidence of criminal activity, system personnel may provide the  *
-      * evidence of such monitoring to law enforcement officials.        *
-      *                                                                  *
-      ********************************************************************
+#     # Section 8: File Permissions
+#     - name: Set critical file permissions
+#       tags: fileperms
+#       file:
+#         path: "{{ item.path }}"
+#         mode: "{{ item.mode }}"
+#       with_items:
+#         - { path: "/etc/passwd", mode: "0644" }
+#         - { path: "/etc/shadow", mode: "0600" }
+#         - { path: "/etc/group", mode: "0644" }
+#         - { path: "/etc/gshadow", mode: "0600" }
+#         - { path: "/boot", mode: "0700" }
+#         - { path: "/usr/src", mode: "0700" }
+#         - { path: "/lib/modules", mode: "0700" }
+#         - { path: "/etc/sudoers.d", mode: "0750" }
+#         - { path: "/etc/polkit-1/localauthority", mode: "0750" }
+#         - { path: "/root", mode: "0700" }
+#         - { path: "/root/.ssh/authorized_keys", mode: "0600" }
 
-  tasks:
-    # Section 1: Initial Setup
-    - name: Install required packages
-      tags: packages
-      package:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - aide
-        - fail2ban
-        - rkhunter
-        - clamav
-        - policycoreutils-python-utils
+#     # Section 9: Malware Protection
+#     - name: Initialize AIDE
+#       tags: malware
+#       command: aide --init
+#       changed_when: false
 
-    # Section 2: Filesystem Hardening
-    - name: Configure separate partitions (placeholder - adjust for your environment)
-      tags: filesystem
-      block:
-        - name: Ensure /home partition exists
-          mount:
-            path: /home
-            src: /dev/xvdf1
-            fstype: ext4
-            state: present
-            opts: defaults
-        
-        - name: Ensure /var partition exists
-          mount:
-            path: /var
-            src: /dev/xvdg1
-            fstype: ext4
-            state: present
-            opts: defaults
-      when: false  # Set to true and adjust devices if using separate partitions
+#     - name: Install AIDE database
+#       tags: malware
+#       command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+#       when: "'aide.db.new.gz' in lookup('file', '/var/lib/aide/aide.db.new.gz', errors='ignore')"
 
-    - name: Set secure mount options
-      tags: filesystem
-      lineinfile:
-        path: /etc/fstab
-        backrefs: yes
-        regexp: '^(.*\s/\s+\w+\s+)defaults(\s+.*)$'
-        line: '\1defaults,nodev,nosuid,noexec\2'
+#     - name: Configure AIDE cron job
+#       tags: malware
+#       cron:
+#         name: "AIDE scan"
+#         hour: "3"
+#         minute: "0"
+#         job: "/usr/sbin/aide --check"
+
+#     - name: Update rkhunter database
+#       tags: malware
+#       command: rkhunter --update
+#       changed_when: false
+
+#     - name: Update rkhunter properties
+#       tags: malware
+#       command: rkhunter --propupd
+#       changed_when: false
+
+#     - name: Configure rkhunter cron job
+#       tags: malware
+#       cron:
+#         name: "rkhunter scan"
+#         hour: "2"
+#         minute: "0"
+#         job: "/usr/bin/rkhunter --check --cronjob"
+
+#     - name: Update ClamAV database
+#       tags: malware
+#       command: freshclam
+#       changed_when: false
+
+#     - name: Configure ClamAV updates
+#       tags: malware
+#       cron:
+#         name: "ClamAV update"
+#         hour: "1"
+#         minute: "0"
+#         job: "/usr/bin/freshclam --quiet"
+
+#     - name: Configure ClamAV scan
+#       tags: malware
+#       cron:
+#         name: "ClamAV full scan"
+#         hour: "4"
+#         minute: "0"
+#         job: "/usr/bin/clamscan --recursive --infected --remove /"
+
+#     - name: Configure Fail2Ban
+#       tags: malware
+#       copy:
+#         dest: /etc/fail2ban/jail.local
+#         content: |
+#           [sshd]
+#           enabled = true
+#           port = {{ ssh_port }}
+#           filter = sshd
+#           logpath = /var/log/secure
+#           maxretry = 3
+#           bantime = 86400
+#           findtime = 3600
+
+#     - name: Enable Fail2Ban
+#       tags: malware
+#       service:
+#         name: fail2ban
+#         state: started
+#         enabled: yes
+
+#     # Section 10: Final Hardening Steps
+#     - name: Disable core dumps
+#       tags: final
+#       lineinfile:
+#         path: /etc/security/limits.conf
+#         line: "* hard core 0"
     
-    - name: Set sticky bit for temp directories
-      tags: filesystem
-      file:
-        path: "{{ item }}"
-        mode: a+t
-      loop:
-        - /tmp
-        - /var/tmp
+#     - name: Disable unnecessary filesystems
+#       tags: final
+#       copy:
+#         dest: /etc/modprobe.d/hardening.conf
+#         content: |
+#           install cramfs /bin/true
+#           install freevxfs /bin/true
+#           install jffs2 /bin/true
+#           install hfs /bin/true
+#           install hfsplus /bin/true
+#           install squashfs /bin/true
+#           install udf /bin/true
+#           install dccp /bin/true
+#           install sctp /bin/true
+#           install rds /bin/true
+#           install tipc /bin/true
+#           install usb-storage /bin/true
+#           install firewire-ohci /bin/true
 
-    # Section 3: Account and Authentication
-    - name: Configure password policies
-      tags: authentication
-      lineinfile:
-        path: /etc/login.defs
-        regexp: "^{{ item.key }}"
-        line: "{{ item.key }} {{ item.value }}"
-      with_items:
-        - { key: "PASS_MAX_DAYS", value: "90" }
-        - { key: "PASS_MIN_DAYS", value: "7" }
-        - { key: "PASS_WARN_AGE", value: "7" }
-        - { key: "UMASK", value: "027" }
+#     - name: Configure DNS resolvers
+#       tags: final
+#       lineinfile:
+#         path: /etc/resolv.conf
+#         line: "nameserver {{ item }}"
+#       loop:
+#         - "8.8.8.8"
+#         - "1.1.1.1"
 
-    - name: Configure password complexity
-      tags: authentication
-      lineinfile:
-        path: /etc/pam.d/system-auth
-        line: "password requisite pam_pwquality.so try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1"
-        insertafter: '^#%PAM-1.0'
+#     - name: Configure /etc/hosts
+#       tags: final
+#       lineinfile:
+#         path: /etc/hosts
+#         line: "{{ ansible_default_ipv4.address }} {{ ansible_hostname }} {{ ansible_hostname.split('.')[0] }}"
 
-    - name: Configure account lockout
-      tags: authentication
-      blockinfile:
-        path: /etc/pam.d/system-auth
-        block: |
-          auth required pam_faillock.so preauth silent audit deny=5 unlock_time=900
-          auth [success=1 default=bad] pam_unix.so
-          auth [default=die] pam_faillock.so authfail audit deny=5 unlock_time=900
-
-    # Section 4: SSH Hardening
-    - name: Configure SSH hardening
-      tags: ssh
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: "^{{ item.key }}"
-        line: "{{ item.key }} {{ item.value }}"
-        validate: '/usr/sbin/sshd -T -f %s'
-      with_items:
-        - { key: "Protocol", value: "2" }
-        - { key: "LogLevel", value: "VERBOSE" }
-        - { key: "X11Forwarding", value: "no" }
-        - { key: "MaxAuthTries", value: "3" }
-        - { key: "MaxSessions", value: "2" }
-        - { key: "IgnoreRhosts", value: "yes" }
-        - { key: "HostbasedAuthentication", value: "no" }
-        - { key: "PermitRootLogin", value: "no" }
-        - { key: "PermitEmptyPasswords", value: "no" }
-        - { key: "PermitUserEnvironment", value: "no" }
-        - { key: "ClientAliveInterval", value: "{{ ssh_timeout }}" }
-        - { key: "ClientAliveCountMax", value: "0" }
-        - { key: "LoginGraceTime", value: "60" }
-        - { key: "Banner", value: "/etc/issue.net" }
-        - { key: "UsePAM", value: "yes" }
-        - { key: "AllowTcpForwarding", value: "no" }
-        - { key: "AllowAgentForwarding", value: "no" }
-        - { key: "TCPKeepAlive", value: "no" }
-        - { key: "Compression", value: "no" }
-        - { key: "Port", value: "{{ ssh_port }}" }
-        - { key: "Ciphers", value: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr" }
-        - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com" }
-        - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512" }
-
-    - name: Create legal banners
-      tags: ssh
-      copy:
-        dest: "{{ item }}"
-        content: "{{ hardening_banner }}"
-      loop:
-        - /etc/issue
-        - /etc/issue.net
-
-    # Section 5: Network Hardening
-    - name: Configure sysctl parameters
-      tags: network
-      sysctl:
-        name: "{{ item.key }}"
-        value: "{{ item.value }}"
-        state: present
-        sysctl_set: yes
-        reload: yes
-      with_items:
-        - { key: "kernel.kptr_restrict", value: "2" }
-        - { key: "kernel.dmesg_restrict", value: "1" }
-        - { key: "kernel.perf_event_paranoid", value: "3" }
-        - { key: "kernel.yama.ptrace_scope", value: "2" }
-        - { key: "kernel.core_uses_pid", value: "1" }
-        - { key: "kernel.sysrq", value: "0" }
-        - { key: "fs.protected_fifos", value: "2" }
-        - { key: "fs.protected_regular", value: "2" }
-        - { key: "fs.protected_hardlinks", value: "1" }
-        - { key: "fs.protected_symlinks", value: "1" }
-        - { key: "fs.suid_dumpable", value: "0" }
-        - { key: "net.ipv4.conf.all.accept_redirects", value: "0" }
-        - { key: "net.ipv4.conf.default.accept_redirects", value: "0" }
-        - { key: "net.ipv4.conf.all.send_redirects", value: "0" }
-        - { key: "net.ipv4.conf.default.send_redirects", value: "0" }
-        - { key: "net.ipv4.conf.all.rp_filter", value: "1" }
-        - { key: "net.ipv4.conf.default.rp_filter", value: "1" }
-        - { key: "net.ipv4.tcp_syncookies", value: "1" }
-        - { key: "net.ipv4.tcp_timestamps", value: "0" }
-        - { key: "net.ipv6.conf.all.accept_redirects", value: "0" }
-        - { key: "net.ipv6.conf.default.accept_redirects", value: "0" }
-        - { key: "net.ipv6.conf.all.disable_ipv6", value: "1" }
-        - { key: "net.ipv6.conf.default.disable_ipv6", value: "1" }
-        - { key: "net.core.bpf_jit_harden", value: "2" }
-
-    - name: Configure firewall
-      tags: network
-      block:
-        - name: Ensure firewalld is running
-          service:
-            name: firewalld
-            state: started
-            enabled: yes
-        
-        - name: Create hardened zone
-          firewalld:
-            zone: hardened
-            state: present
-            target: DROP
-            permanent: yes
-        
-        - name: Add services to zone
-          firewalld:
-            zone: hardened
-            service: "{{ item }}"
-            permanent: yes
-            state: enabled
-          loop:
-            - ssh
-        
-        - name: Add custom SSH port
-          firewalld:
-            zone: hardened
-            port: "{{ ssh_port }}/tcp"
-            permanent: yes
-            state: enabled
-        
-        - name: Set default zone
-          firewalld:
-            zone: hardened
-            interface: eth0
-            permanent: yes
-            state: enabled
-        
-        - name: Reload firewall
-          command: firewall-cmd --reload
-
-    # Section 6: Service Hardening
-    - name: Disable unnecessary services
-      tags: services
-      service:
-        name: "{{ item }}"
-        state: stopped
-        enabled: no
-      loop:
-        - rpcbind
-        - nfs
-        - atd
-        - avahi-daemon
-        - cups
-        - dhcpd
-        - slapd
-        - named
-        - vsftpd
-        - telnet.socket
-
-    # Section 7: Logging and Auditing
-    - name: Configure audit rules
-      tags: logging
-      copy:
-        dest: /etc/audit/rules.d/hardening.rules
-        content: |
-          # Audit system events
-          -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
-          -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
-          -a always,exit -F arch=b64 -S clock_settime -k time-change
-          -a always,exit -F arch=b32 -S clock_settime -k time-change
-          -w /etc/localtime -p wa -k time-change
-
-          # Audit user/group changes
-          -w /etc/group -p wa -k identity
-          -w /etc/passwd -p wa -k identity
-          -w /etc/gshadow -p wa -k identity
-          -w /etc/shadow -p wa -k identity
-          -w /etc/security/opasswd -p wa -k identity
-
-          # Audit system network configuration
-          -w /etc/hosts -p wa -k network-modifications
-          -w /etc/sysconfig/network -p wa -k network-modifications
-          -w /etc/sysconfig/network-scripts/ -p wa -k network-modifications
-
-          # Audit privileged commands
-          -a always,exit -F path=/usr/sbin/setfiles -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged
-
-    - name: Restart auditd
-      tags: logging
-      service:
-        name: auditd
-        state: restarted
-
-    - name: Configure rsyslog
-      tags: logging
-      copy:
-        dest: /etc/rsyslog.d/90-hardening.conf
-        content: |
-          *.emerg :omusrmsg:*
-          auth.* /var/log/auth.log
-          authpriv.* /var/log/secure
-          mail.* /var/log/mail.log
-          cron.* /var/log/cron.log
-          *.=warning;*.=err /var/log/warn.log
-          *.crit /var/log/warn.log
-          *.*;mail.none;authpriv.none;cron.none /var/log/messages
-
-    - name: Restart rsyslog
-      tags: logging
-      service:
-        name: rsyslog
-        state: restarted
-
-    # Section 8: File Permissions
-    - name: Set critical file permissions
-      tags: fileperms
-      file:
-        path: "{{ item.path }}"
-        mode: "{{ item.mode }}"
-      with_items:
-        - { path: "/etc/passwd", mode: "0644" }
-        - { path: "/etc/shadow", mode: "0600" }
-        - { path: "/etc/group", mode: "0644" }
-        - { path: "/etc/gshadow", mode: "0600" }
-        - { path: "/boot", mode: "0700" }
-        - { path: "/usr/src", mode: "0700" }
-        - { path: "/lib/modules", mode: "0700" }
-        - { path: "/etc/sudoers.d", mode: "0750" }
-        - { path: "/etc/polkit-1/localauthority", mode: "0750" }
-        - { path: "/root", mode: "0700" }
-        - { path: "/root/.ssh/authorized_keys", mode: "0600" }
-
-    # Section 9: Malware Protection
-    - name: Initialize AIDE
-      tags: malware
-      command: aide --init
-      changed_when: false
-
-    - name: Install AIDE database
-      tags: malware
-      command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
-      when: "'aide.db.new.gz' in lookup('file', '/var/lib/aide/aide.db.new.gz', errors='ignore')"
-
-    - name: Configure AIDE cron job
-      tags: malware
-      cron:
-        name: "AIDE scan"
-        hour: "3"
-        minute: "0"
-        job: "/usr/sbin/aide --check"
-
-    - name: Update rkhunter database
-      tags: malware
-      command: rkhunter --update
-      changed_when: false
-
-    - name: Update rkhunter properties
-      tags: malware
-      command: rkhunter --propupd
-      changed_when: false
-
-    - name: Configure rkhunter cron job
-      tags: malware
-      cron:
-        name: "rkhunter scan"
-        hour: "2"
-        minute: "0"
-        job: "/usr/bin/rkhunter --check --cronjob"
-
-    - name: Update ClamAV database
-      tags: malware
-      command: freshclam
-      changed_when: false
-
-    - name: Configure ClamAV updates
-      tags: malware
-      cron:
-        name: "ClamAV update"
-        hour: "1"
-        minute: "0"
-        job: "/usr/bin/freshclam --quiet"
-
-    - name: Configure ClamAV scan
-      tags: malware
-      cron:
-        name: "ClamAV full scan"
-        hour: "4"
-        minute: "0"
-        job: "/usr/bin/clamscan --recursive --infected --remove /"
-
-    - name: Configure Fail2Ban
-      tags: malware
-      copy:
-        dest: /etc/fail2ban/jail.local
-        content: |
-          [sshd]
-          enabled = true
-          port = {{ ssh_port }}
-          filter = sshd
-          logpath = /var/log/secure
-          maxretry = 3
-          bantime = 86400
-          findtime = 3600
-
-    - name: Enable Fail2Ban
-      tags: malware
-      service:
-        name: fail2ban
-        state: started
-        enabled: yes
-
-    # Section 10: Final Hardening Steps
-    - name: Disable core dumps
-      tags: final
-      lineinfile:
-        path: /etc/security/limits.conf
-        line: "* hard core 0"
-    
-    - name: Disable unnecessary filesystems
-      tags: final
-      copy:
-        dest: /etc/modprobe.d/hardening.conf
-        content: |
-          install cramfs /bin/true
-          install freevxfs /bin/true
-          install jffs2 /bin/true
-          install hfs /bin/true
-          install hfsplus /bin/true
-          install squashfs /bin/true
-          install udf /bin/true
-          install dccp /bin/true
-          install sctp /bin/true
-          install rds /bin/true
-          install tipc /bin/true
-          install usb-storage /bin/true
-          install firewire-ohci /bin/true
-
-    - name: Configure DNS resolvers
-      tags: final
-      lineinfile:
-        path: /etc/resolv.conf
-        line: "nameserver {{ item }}"
-      loop:
-        - "8.8.8.8"
-        - "1.1.1.1"
-
-    - name: Configure /etc/hosts
-      tags: final
-      lineinfile:
-        path: /etc/hosts
-        line: "{{ ansible_default_ipv4.address }} {{ ansible_hostname }} {{ ansible_hostname.split('.')[0] }}"
-
-  post_tasks:
-    - name: Reboot system (if needed)
-      tags: reboot
-      reboot:
-        msg: "Reboot initiated by Ansible for system hardening"
-        connect_timeout: 5
-      when: reboot_required.stat.exists
+#   post_tasks:
+#     - name: Reboot system (if needed)
+#       tags: reboot
+#       reboot:
+#         msg: "Reboot initiated by Ansible for system hardening"
+#         connect_timeout: 5
+#       when: reboot_required.stat.exists
