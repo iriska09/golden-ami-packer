@@ -1,259 +1,259 @@
 
-# - name: CIS Level 1 Hardening - Amazon Linux 2023
-#   hosts: all
-#   become: true
+- name: CIS Level 1 Hardening - Amazon Linux 2023
+  hosts: all
+  become: true
 
-#   vars:
-#     sshd_config_path: /etc/ssh/sshd_config
+  vars:
+    sshd_config_path: /etc/ssh/sshd_config
 
-#   tasks:
+  tasks:
 
-#     # ------------------- SSH Installation and Setup -------------------
-#     - name: Check if OpenSSH server is installed
+    # ------------------- SSH Installation and Setup -------------------
+    - name: Check if OpenSSH server is installed
+      stat:
+        path: /usr/sbin/sshd
+      register: sshd_installed
+
+    - name: Install OpenSSH server if not present
+      package:
+        name: openssh-server
+        state: present
+      when: not sshd_installed.stat.exists
+
+    - name: Verify SSH service name
+      shell: systemctl list-unit-files | grep -E "^sshd.*service" || true
+      register: ssh_service_check
+      changed_when: false
+
+    - name: Set correct SSH service name fact
+      set_fact:
+        ssh_service_name: "{{ 'sshd' if 'sshd.service' in ssh_service_check.stdout else 'ssh' }}"
+
+    - name: Ensure SSH service is enabled and running
+      systemd:
+        name: "{{ ssh_service_name }}"
+        enabled: yes
+        state: started
+
+    # ------------------- SSH Configuration -------------------
+    - name: Configure SSH settings
+      block:
+        - name: Disable root login via SSH
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^PermitRootLogin'
+            line: 'PermitRootLogin no'
+            backup: yes
+        - name: Disable password authentication
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^PasswordAuthentication'
+            line: 'PasswordAuthentication no'
+            backup: yes
+        - name: Set SSH protocol to 2
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^Protocol'
+            line: 'Protocol 2'
+            backup: yes
+        - name: Explicitly set SSH Port 22
+          lineinfile:
+            path: "{{ sshd_config_path }}"
+            regexp: '^Port'
+            line: 'Port 22'
+            backup: yes
+        - name: Restart SSH service to apply changes
+          service:
+            name: "{{ ssh_service_name }}"
+            state: restarted
+
+#     # ------------------- Password Policies -------------------
+#     - name: Set password max days to 90
+#       lineinfile:
+#         path: /etc/login.defs
+#         regexp: '^PASS_MAX_DAYS'
+#         line: 'PASS_MAX_DAYS 90'
+
+#     - name: Set password min days to 7
+#       lineinfile:
+#         path: /etc/login.defs
+#         regexp: '^PASS_MIN_DAYS'
+#         line: 'PASS_MIN_DAYS 7'
+
+#     - name: Set warning age for password expiration
+#       lineinfile:
+#         path: /etc/login.defs
+#         regexp: '^PASS_WARN_AGE'
+#         line: 'PASS_WARN_AGE 14'
+
+#     - name: Check if pwquality.conf exists
 #       stat:
-#         path: /usr/sbin/sshd
-#       register: sshd_installed
+#         path: /etc/security/pwquality.conf
+#       register: pwquality_conf
 
-#     - name: Install OpenSSH server if not present
+#     - name: Set minimum password length to 14
+#       lineinfile:
+#         path: /etc/security/pwquality.conf
+#         regexp: '^minlen'
+#         line: 'minlen = 14'
+#       when: pwquality_conf.stat.exists
+
+#     - name: Set password hashing rounds
+#       lineinfile:
+#         path: /etc/login.defs
+#         regexp: '^SHA_CRYPT_MIN_ROUNDS'
+#         line: 'SHA_CRYPT_MIN_ROUNDS 640000'
+
+#     # ------------------- Kernel Hardening -------------------
+#     - name: Configure kernel parameters (persisted)
+#       copy:
+#         dest: /etc/sysctl.d/cis-hardening.conf
+#         content: |
+#           fs.protected_fifos = 2
+#           fs.protected_regular = 2
+#           kernel.kptr_restrict = 2
+#           kernel.perf_event_paranoid = 3
+#           kernel.sysrq = 0
+#           kernel.yama.ptrace_scope = 1
+#           net.core.bpf_jit_harden = 2
+#           net.ipv4.conf.all.accept_redirects = 0
+#           net.ipv4.conf.all.log_martians = 1
+#           net.ipv4.conf.all.rp_filter = 1
+#           net.ipv4.conf.all.send_redirects = 0
+#           net.ipv4.conf.default.accept_redirects = 0
+#           net.ipv4.conf.default.log_martians = 1
+#           net.ipv6.conf.all.accept_redirects = 0
+#           net.ipv6.conf.default.accept_redirects = 0
+#       notify: reload sysctl
+
+#     # ------------------- audit ad logging -------------------
+#     - name: Ensure auditd is installed
 #       package:
-#         name: openssh-server
+#         name: auditd
 #         state: present
-#       when: not sshd_installed.stat.exists
 
-# #     - name: Verify SSH service name
-# #       shell: systemctl list-unit-files | grep -E "^sshd.*service" || true
-# #       register: ssh_service_check
-# #       changed_when: false
+#     - name: Enable and start auditd
+#       service:
+#         name: auditd
+#         enabled: true
+#         state: started
 
-# #     - name: Set correct SSH service name fact
-# #       set_fact:
-# #         ssh_service_name: "{{ 'sshd' if 'sshd.service' in ssh_service_check.stdout else 'ssh' }}"
+#     - name: Set audit rules file permissions
+#       file:
+#         path: /etc/audit/audit.rules
+#         mode: '0640'
 
-# #     - name: Ensure SSH service is enabled and running
-# #       systemd:
-# #         name: "{{ ssh_service_name }}"
-# #         enabled: yes
-# #         state: started
+#     - name: Set audit config file permissions
+#       file:
+#         path: /etc/audit/auditd.conf
+#         mode: '0640'
 
-# #     # ------------------- SSH Configuration -------------------
-# #     - name: Configure SSH settings
-# #       block:
-# #         - name: Disable root login via SSH
-# #           lineinfile:
-# #             path: "{{ sshd_config_path }}"
-# #             regexp: '^PermitRootLogin'
-# #             line: 'PermitRootLogin no'
-# #             backup: yes
-# #         - name: Disable password authentication
-# #           lineinfile:
-# #             path: "{{ sshd_config_path }}"
-# #             regexp: '^PasswordAuthentication'
-# #             line: 'PasswordAuthentication no'
-# #             backup: yes
-# #         - name: Set SSH protocol to 2
-# #           lineinfile:
-# #             path: "{{ sshd_config_path }}"
-# #             regexp: '^Protocol'
-# #             line: 'Protocol 2'
-# #             backup: yes
-# #         - name: Explicitly set SSH Port 22
-# #           lineinfile:
-# #             path: "{{ sshd_config_path }}"
-# #             regexp: '^Port'
-# #             line: 'Port 22'
-# #             backup: yes
-# #         - name: Restart SSH service to apply changes
-# #           service:
-# #             name: "{{ ssh_service_name }}"
-# #             state: restarted
-
-# #     # ------------------- Password Policies -------------------
-# #     - name: Set password max days to 90
-# #       lineinfile:
-# #         path: /etc/login.defs
-# #         regexp: '^PASS_MAX_DAYS'
-# #         line: 'PASS_MAX_DAYS 90'
-
-# #     - name: Set password min days to 7
-# #       lineinfile:
-# #         path: /etc/login.defs
-# #         regexp: '^PASS_MIN_DAYS'
-# #         line: 'PASS_MIN_DAYS 7'
-
-# #     - name: Set warning age for password expiration
-# #       lineinfile:
-# #         path: /etc/login.defs
-# #         regexp: '^PASS_WARN_AGE'
-# #         line: 'PASS_WARN_AGE 14'
-
-# #     - name: Check if pwquality.conf exists
-# #       stat:
-# #         path: /etc/security/pwquality.conf
-# #       register: pwquality_conf
-
-# #     - name: Set minimum password length to 14
-# #       lineinfile:
-# #         path: /etc/security/pwquality.conf
-# #         regexp: '^minlen'
-# #         line: 'minlen = 14'
-# #       when: pwquality_conf.stat.exists
-
-# #     - name: Set password hashing rounds
-# #       lineinfile:
-# #         path: /etc/login.defs
-# #         regexp: '^SHA_CRYPT_MIN_ROUNDS'
-# #         line: 'SHA_CRYPT_MIN_ROUNDS 640000'
-
-# #     # ------------------- Kernel Hardening -------------------
-# #     - name: Configure kernel parameters (persisted)
-# #       copy:
-# #         dest: /etc/sysctl.d/cis-hardening.conf
-# #         content: |
-# #           fs.protected_fifos = 2
-# #           fs.protected_regular = 2
-# #           kernel.kptr_restrict = 2
-# #           kernel.perf_event_paranoid = 3
-# #           kernel.sysrq = 0
-# #           kernel.yama.ptrace_scope = 1
-# #           net.core.bpf_jit_harden = 2
-# #           net.ipv4.conf.all.accept_redirects = 0
-# #           net.ipv4.conf.all.log_martians = 1
-# #           net.ipv4.conf.all.rp_filter = 1
-# #           net.ipv4.conf.all.send_redirects = 0
-# #           net.ipv4.conf.default.accept_redirects = 0
-# #           net.ipv4.conf.default.log_martians = 1
-# #           net.ipv6.conf.all.accept_redirects = 0
-# #           net.ipv6.conf.default.accept_redirects = 0
-# #       notify: reload sysctl
-
-# #     # ------------------- audit ad logging -------------------
-# #     - name: Ensure auditd is installed
-# #       package:
-# #         name: auditd
-# #         state: present
-
-# #     - name: Enable and start auditd
-# #       service:
-# #         name: auditd
-# #         enabled: true
-# #         state: started
-
-# #     - name: Set audit rules file permissions
-# #       file:
-# #         path: /etc/audit/audit.rules
-# #         mode: '0640'
-
-# #     - name: Set audit config file permissions
-# #       file:
-# #         path: /etc/audit/auditd.conf
-# #         mode: '0640'
-
-# #     - name: Configure remote logging
-# #       lineinfile:
-# #         path: /etc/rsyslog.conf
-# #         line: '*.* @loghost.example.com'
-# #       notify: restart rsyslog
+#     - name: Configure remote logging
+#       lineinfile:
+#         path: /etc/rsyslog.conf
+#         line: '*.* @loghost.example.com'
+#       notify: restart rsyslog
 
 
-# #     # ------------------- Unused Services -------------------
-# #     - name: Remove unnecessary packages
-# #       package:
-# #         name: "{{ item }}"
-# #         state: absent
-# #       loop:
-# #         - telnet
-# #         - rsh
-# #         - talk
-# #         - xinetd
+#     # ------------------- Unused Services -------------------
+#     - name: Remove unnecessary packages
+#       package:
+#         name: "{{ item }}"
+#         state: absent
+#       loop:
+#         - telnet
+#         - rsh
+#         - talk
+#         - xinetd
 
-# #     - name: Disable USB storage persistently
-# #       copy:
-# #         dest: /etc/modprobe.d/disable-usb.conf
-# #         content: "blacklist usb-storage"
+#     - name: Disable USB storage persistently
+#       copy:
+#         dest: /etc/modprobe.d/disable-usb.conf
+#         content: "blacklist usb-storage"
 
-# #     - name: Disable firewire persistently
-# #       copy:
-# #         dest: /etc/modprobe.d/disable-firewire.conf
-# #         content: "blacklist firewire-ohci"
+#     - name: Disable firewire persistently
+#       copy:
+#         dest: /etc/modprobe.d/disable-firewire.conf
+#         content: "blacklist firewire-ohci"
 
-# #     # ------------------- File Permissions -------------------
-# #     - name: Set permissions for /etc/passwd
-# #       file:
-# #         path: /etc/passwd
-# #         owner: root
-# #         group: root
-# #         mode: '0644'
+#     # ------------------- File Permissions -------------------
+#     - name: Set permissions for /etc/passwd
+#       file:
+#         path: /etc/passwd
+#         owner: root
+#         group: root
+#         mode: '0644'
 
-# #     - name: Set permissions for /etc/shadow
-# #       file:
-# #         path: /etc/shadow
-# #         owner: root
-# #         group: root
-# #         mode: '0000'
+#     - name: Set permissions for /etc/shadow
+#       file:
+#         path: /etc/shadow
+#         owner: root
+#         group: root
+#         mode: '0000'
 
-# #     - name: Set permissions for /etc/group
-# #       file:
-# #         path: /etc/group
-# #         owner: root
-# #         group: root
-# #         mode: '0644'
+#     - name: Set permissions for /etc/group
+#       file:
+#         path: /etc/group
+#         owner: root
+#         group: root
+#         mode: '0644'
 
-# #     - name: Set strict umask in login.defs
-# #       lineinfile:
-# #         path: /etc/login.defs
-# #         regexp: '^UMASK'
-# #         line: 'UMASK 027'
+#     - name: Set strict umask in login.defs
+#       lineinfile:
+#         path: /etc/login.defs
+#         regexp: '^UMASK'
+#         line: 'UMASK 027'
 
-# #     # ------------------- Security Tools -------------------
-# #     - name: Install rkhunter
-# #       package:
-# #         name: rkhunter
-# #         state: present
+#     # ------------------- Security Tools -------------------
+#     - name: Install rkhunter
+#       package:
+#         name: rkhunter
+#         state: present
 
-# #     - name: Install AIDE
-# #       package:
-# #         name: aide
-# #         state: present
+#     - name: Install AIDE
+#       package:
+#         name: aide
+#         state: present
 
 
 
 
-# #     - name: Install fail2ban
-# #       package:
-# #         name: fail2ban
-# #         state: present
+#     - name: Install fail2ban
+#       package:
+#         name: fail2ban
+#         state: present
 
-# #     # ------------------- Legal Banners -------------------
-# #     - name: Set /etc/issue banner
-# #       copy:
-# #         dest: /etc/issue
-# #         content: |
-# #           WARNING: Unauthorized access to this system is forbidden and will be
-# #           prosecuted by law. By accessing this system, you agree that your actions
-# #           may be monitored if unauthorized usage is suspected.
-# #         owner: root
-# #         group: root
-# #         mode: '0644'
+#     # ------------------- Legal Banners -------------------
+#     - name: Set /etc/issue banner
+#       copy:
+#         dest: /etc/issue
+#         content: |
+#           WARNING: Unauthorized access to this system is forbidden and will be
+#           prosecuted by law. By accessing this system, you agree that your actions
+#           may be monitored if unauthorized usage is suspected.
+#         owner: root
+#         group: root
+#         mode: '0644'
 
-# #     - name: Set /etc/issue.net banner
-# #       copy:
-# #         dest: /etc/issue.net
-# #         content: |
-# #           WARNING: Unauthorized access to this system is forbidden and will be
-# #           prosecuted by law. By accessing this system, you agree that your actions
-# #           may be monitored if unauthorized usage is suspected.
-# #         owner: root
-# #         group: root
-# #         mode: '0644'
+#     - name: Set /etc/issue.net banner
+#       copy:
+#         dest: /etc/issue.net
+#         content: |
+#           WARNING: Unauthorized access to this system is forbidden and will be
+#           prosecuted by law. By accessing this system, you agree that your actions
+#           may be monitored if unauthorized usage is suspected.
+#         owner: root
+#         group: root
+#         mode: '0644'
 
-# #   handlers:
-# #     - name: restart rsyslog
-# #       service:
-# #         name: rsyslog
-# #         state: restarted
+#   handlers:
+#     - name: restart rsyslog
+#       service:
+#         name: rsyslog
+#         state: restarted
 
-# #     - name: reload sysctl
-# #       command: sysctl --system
+#     - name: reload sysctl
+#       command: sysctl --system
 # ---
 # - name: Comprehensive System Hardening Playbook
 #   hosts: all
